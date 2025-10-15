@@ -1,0 +1,43 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+
+# Build outputs
+dist/
+*.js.map
+*.d.ts.map
+
+# TypeScript
+*.tsbuildinfo
+
+# n8n specific
+# Ignore n8n CLI’s custom node dev cache
+.n8n-node-cli/
+.n8n/
+
+# Logs
+logs/
+*.log
+debug.log
+error.log
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Package lock files
+package-lock.json
+
+# Git metadata backups
+*.orig

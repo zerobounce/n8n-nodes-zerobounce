@@ -1,0 +1,60 @@
+{
+	"name": "@zerobounce/n8n-nodes-zerobounce",
+	"version": "0.1.1",
+	"publishConfig": {
+		"access": "public"
+	},
+	"description": "n8n node to work with the ZeroBounce API",
+	"license": "MIT",
+	"homepage": "https://www.zerobounce.net/",
+	"keywords": [
+		"n8n-community-node-package",
+		"n8n",
+		"zerobounce",
+		"email",
+		"validation"
+	],
+	"author": {
+		"name": "ZeroBounce",
+		"email": "integrations@zerobounce.net"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/zerobounce/n8n-nodes-zerobounce.git"
+	},
+	"scripts": {
+		"build": "n8n-node build",
+		"build:watch": "tsc --watch",
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"release": "n8n-node release",
+		"prepublishOnly": "n8n-node prerelease"
+	},
+	"files": [
+		"dist"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"credentials": [
+			"dist/credentials/ZeroBounceApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/ZeroBounce/ZeroBounce.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "*",
+		"@types/node": "^20.19",
+		"eslint": "9.39.1",
+		"prettier": "3.6.2",
+		"release-it": "^19.0.4",
+		"typescript": "5.9.3"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	},
+	"overrides": {
+		"form-data": "4.0.4"
+	}
+}
