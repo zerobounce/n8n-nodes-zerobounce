@@ -25,7 +25,7 @@ interface IFindResponse extends IDataObject {
 	company_name: string; // The company associated with the domain.
 	did_you_mean: string; // e.g. a suggestion in case a firstname is used in the lastname field
 	failure_reason: string; // A reason for the unknown result. Possible values can be found in the "Possible reasons for unknown status" section below.
-	other_domain_formats?: IOtherDomainFormat[],
+	other_domain_formats?: IOtherDomainFormat[];
 }
 
 interface IOtherDomainFormat {

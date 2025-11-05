@@ -2,10 +2,8 @@ import { IExecuteFunctions, INodeExecutionData, INodeType, INodeTypeDescription 
 import { AccountOperationHints, AccountOperations } from './operations/account.operations';
 import { ValidationOperationHints, ValidationOperations } from './operations/validation.operations';
 import { getHandler, IOperationHandler } from './utils/handler.utils';
-import { BulkValidationOperationHints, BulkValidationOperations } from './operations/bulk-validation.operations';
 import { Credentials, Resources } from './enums';
 import { ScoringOperationHints, ScoringOperations } from './operations/scoring.operations';
-import { BulkScoringOperationHints, BulkScoringOperations } from './operations/bulk-scoring.operations';
 import { EmailFinderOperationHints, EmailFinderOperations } from './operations/email-finder.operations';
 
 export class ZeroBounce implements INodeType {
@@ -61,12 +59,12 @@ export class ZeroBounce implements INodeType {
 					{
 						name: 'Validation',
 						value: Resources.Validation,
-						description: 'Real-time email validation',
+						description: 'Email validation',
 					},
 					{
 						name: 'A.I. Scoring',
 						value: Resources.Scoring,
-						description: 'Real-time email scoring',
+						description: 'Email scoring',
 					},
 					{
 						name: 'Email Finder',
@@ -74,32 +72,18 @@ export class ZeroBounce implements INodeType {
 						description:
 							'Email Finder allows you to search for new business email addresses using our proprietary technologies',
 					},
-					{
-						name: 'Bulk Validation',
-						value: Resources.BulkValidation,
-						description: 'File based bulk email validation',
-					},
-					{
-						name: 'Bulk A.I. Scoring',
-						value: Resources.BulkScoring,
-						description: 'File based bulk email scoring',
-					},
 				],
 				default: Resources.Validation,
 			},
 			...AccountOperations,
 			...ValidationOperations,
 			...ScoringOperations,
-			...BulkValidationOperations,
-			...BulkScoringOperations,
 			...EmailFinderOperations,
 		],
 		hints: [
 			...AccountOperationHints,
 			...ValidationOperationHints,
 			...ScoringOperationHints,
-			...BulkScoringOperationHints,
-			...BulkValidationOperationHints,
 			...EmailFinderOperationHints,
 		],
 	};

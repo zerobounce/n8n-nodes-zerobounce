@@ -6,8 +6,6 @@ export enum Resources {
 	Account = 'account',
 	Validation = 'validation',
 	Scoring = 'scoring',
-	BulkValidation = 'bulkValidation',
-	BulkScoring = 'bulkScoring',
 	EmailFinder = 'emailFinder',
 	DomainSearch = 'domainSearch',
 	ActivityData = 'activityData',
@@ -25,17 +23,13 @@ export enum Operations {
 	// Validation
 	ValidationValidate = 'validate',
 	ValidationBatchValidate = 'batchValidate',
-
-	// Scoring
-	ScoringScore = 'score',
-
-	// Bulk Validation
 	BulkValidationSendFile = 'sendFile',
 	BulkValidationGetFile = 'getFile',
 	BulkValidationFileStatus = 'fileStatus',
 	BulkValidationDeleteFile = 'deleteFile',
 
-	// Bulk Scoring
+	// Scoring
+	ScoringScore = 'score',
 	BulkScoringSendFile = 'scoringSendFile',
 	BulkScoringGetFile = 'scoringGetFile',
 	BulkScoringFileStatus = 'scoringFileStatus',

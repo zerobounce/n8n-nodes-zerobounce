@@ -10,7 +10,6 @@ import {
 	NodeParameterValueType,
 } from 'n8n-workflow';
 import { ValidationHandler } from '../handlers/validation.handler';
-import { BulkValidationHandler } from '../handlers/bulk-validation.handler';
 import AccountHandler from '../handlers/account.handler';
 import {
 	EmailBatchAssignment,
@@ -24,7 +23,6 @@ import { Mode, Resources } from '../enums';
 import { Readable } from 'node:stream';
 import { FileId } from '../fields/file-id.field';
 import { ScoringHandler } from '../handlers/scoring.handler';
-import { BulkScoringHandler } from '../handlers/bulk-scoring.handler';
 import { CombineItems } from '../fields/combine-items.field';
 import { EmailFinderHandler } from '../handlers/email-finder.handler';
 
@@ -63,12 +61,8 @@ export function createHandler(resource: string): IOperationHandler {
 			return new AccountHandler();
 		case Resources.Validation:
 			return new ValidationHandler();
-		case Resources.BulkValidation:
-			return new BulkValidationHandler();
 		case Resources.Scoring:
 			return new ScoringHandler();
-		case Resources.BulkScoring:
-			return new BulkScoringHandler();
 		case Resources.EmailFinder:
 			return new EmailFinderHandler();
 		default:

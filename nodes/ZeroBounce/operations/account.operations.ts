@@ -15,8 +15,8 @@ const GetCreditsFields: INodeProperties[] = [
 	ApiEndpoint,
 	CreditsRequired,
 ].map(addDisplayOptions({
-		resource: [Resources.Account],
-	 	operation: [Operations.AccountGetCredits],
+	resource: [Resources.Account],
+	operation: [Operations.AccountGetCredits],
 }));
 
 // prettier-ignore
@@ -102,9 +102,25 @@ export const AccountOperations: INodeProperties[] = [
 ];
 
 export const AccountOperationHints: NodeHint[] = [
-	documentationHint(Operations.AccountGetCredits, 'ZeroBounce Account: Get Credit Balance', Documentation.GetCreditsBalance),
+	documentationHint(
+		Operations.AccountGetCredits,
+		'ZeroBounce Account: Get Credit Balance',
+		Documentation.GetCreditsBalance,
+	),
 	documentationHint(Operations.AccountGetApiUsage, 'ZeroBounce Account: Get API Usage', Documentation.GetApiUsage),
-	documentationHint(Operations.AccountListFilters, 'ZeroBounce Account: Allowlist and Blocklist', Documentation.AllowlistAndBlocklist),
-	documentationHint(Operations.AccountAddFilter, 'ZeroBounce Account: Allowlist and Blocklist', Documentation.AllowlistAndBlocklist),
-	documentationHint(Operations.AccountDeleteFilter, 'ZeroBounce Account: Allowlist and Blocklist', Documentation.AllowlistAndBlocklist),
+	documentationHint(
+		Operations.AccountListFilters,
+		'ZeroBounce Account: Allowlist and Blocklist',
+		Documentation.AllowlistAndBlocklist,
+	),
+	documentationHint(
+		Operations.AccountAddFilter,
+		'ZeroBounce Account: Allowlist and Blocklist',
+		Documentation.AllowlistAndBlocklist,
+	),
+	documentationHint(
+		Operations.AccountDeleteFilter,
+		'ZeroBounce Account: Allowlist and Blocklist',
+		Documentation.AllowlistAndBlocklist,
+	),
 ];

@@ -9,5 +9,5 @@ export const BinaryKey: INodeProperties = {
 	default: 'data',
 	placeholder: 'data',
 	required: true,
-	description: 'The key which identifies which binary data to send as a file, usually \'data\'',
+	description: "The key which identifies which binary data to send as a file, usually 'data'",
 };

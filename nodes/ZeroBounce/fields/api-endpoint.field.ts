@@ -19,7 +19,8 @@ export const ApiEndpoint: INodeProperties = {
 		{
 			name: 'US',
 			value: BaseUrl.US,
-			description: 'This is an endpoint where validations and other interactions only occur within the United States. By utilizing this endpoint, you acknowledge and consent to your data being processed on servers in the United States.',
+			description:
+				'This is an endpoint where validations and other interactions only occur within the United States. By utilizing this endpoint, you acknowledge and consent to your data being processed on servers in the United States.',
 		},
 		{
 			name: 'EU',

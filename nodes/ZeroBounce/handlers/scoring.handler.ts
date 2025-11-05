@@ -1,9 +1,10 @@
 import { ApplicationError, IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
 import { IErrorResponse, IOperationHandler, isErrorResponse } from '../utils/handler.utils';
 import { IRequestParams, zbGetRequest } from '../utils/request.utils';
-import { BaseUrl, Endpoint, Operations } from '../enums';
+import { BaseUrl, Endpoint, Mode, Operations } from '../enums';
 import { Email } from '../fields/email.field';
 import { ApiEndpoint } from '../fields/api-endpoint.field';
+import { deleteFile, fileStatus, getFile, sendFile } from '../utils/bulk.utils';
 
 interface IScoreRequest extends IRequestParams {
 	email: string; // The email address that you want to retrieve Scoring data for
@@ -41,6 +42,14 @@ export class ScoringHandler implements IOperationHandler {
 		switch (operation) {
 			case Operations.ScoringScore:
 				return score(context, i);
+			case Operations.BulkScoringSendFile:
+				return sendFile(context, i, Mode.SCORING);
+			case Operations.BulkScoringGetFile:
+				return getFile(context, i, Mode.SCORING);
+			case Operations.BulkScoringFileStatus:
+				return fileStatus(context, i, Mode.SCORING);
+			case Operations.BulkScoringDeleteFile:
+				return deleteFile(context, i, Mode.SCORING);
 			default:
 				throw new ApplicationError(`Operation ${operation} not supported`);
 		}

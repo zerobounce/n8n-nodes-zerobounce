@@ -15,7 +15,8 @@ export const SendFileInputType: INodeProperties = {
 	type: 'options',
 	allowArbitraryValues: false,
 	noDataExpression: true,
-	description: 'Type of input for the file to send. An existing file, or email batch fields to use to create a new file.',
+	description:
+		'Type of input for the file to send. An existing file, or email batch fields to use to create a new file.',
 	options: [
 		{ name: 'File', value: SendFileInputFieldType.FILE },
 		{ name: 'Email Batch', value: SendFileInputFieldType.EMAIL_BATCH },

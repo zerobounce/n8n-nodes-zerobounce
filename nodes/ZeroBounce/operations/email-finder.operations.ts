@@ -19,8 +19,8 @@ const FindFields: INodeProperties[] = [
 	MiddleName,
 	LastName,
 ].map(addDisplayOptions({
-		resource: [Resources.EmailFinder],
-	 	operation: [Operations.EmailFinderFind],
+	resource: [Resources.EmailFinder],
+	operation: [Operations.EmailFinderFind],
 }));
 
 export const EmailFinderOperations: INodeProperties[] = [

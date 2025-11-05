@@ -15,6 +15,7 @@ import { ActivityData } from '../fields/activity-data.field';
 import { VerifyPlus } from '../fields/verify-plus.field';
 import { IpAddress } from '../fields/ip-address.field';
 import { ApiEndpoint } from '../fields/api-endpoint.field';
+import { deleteFile, fileStatus, getFile, sendFile } from '../utils/bulk.utils';
 
 interface IValidateBase {
 	timeout?: number; // The duration (3 - 60 seconds) allowed for the validation. If met, the API will return unknown / greylisted. (optional parameter)
@@ -227,6 +228,14 @@ export class ValidationHandler implements IOperationHandler {
 				return validate(context, i, timeout, activityData, verifyPlus);
 			case Operations.ValidationBatchValidate:
 				return batchValidate(context, i, timeout, activityData, verifyPlus);
+			case Operations.BulkValidationSendFile:
+				return sendFile(context, i, Mode.VALIDATION);
+			case Operations.BulkValidationGetFile:
+				return getFile(context, i, Mode.VALIDATION);
+			case Operations.BulkValidationFileStatus:
+				return fileStatus(context, i, Mode.VALIDATION);
+			case Operations.BulkValidationDeleteFile:
+				return deleteFile(context, i, Mode.VALIDATION);
 			default:
 				throw new ApplicationError(`Operation ${operation} not supported`);
 		}

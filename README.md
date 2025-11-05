@@ -26,18 +26,16 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 - Validation
   - Validate Email
   - Validate Batch
+  - Bulk Validate Send File
+  -	Bulk Validate Get File
+  -	Bulk Validate File Status
+  -	Bulk Validate Delete File
 - A.I. Scoring
   - Score Email
-- Bulk Validation
-  - Send Validation File
-  -	Get Validation Results File
-  -	Get Validation File Status
-  -	Delete Validation File
-- Bulk A.I. Scoring
-  - Send Scoring File
-  - Get Scoring Results File
-  - Get Scoring File Status
-  - Delete Scoring File
+  - Bulk A.I. Scoring Send File
+  -	Bulk A.I. Scoring Get File
+  -	Bulk A.I. Scoring File Status
+  -	Bulk A.I. Scoring Delete File
 - Email Finder
   - Find Email Address
 

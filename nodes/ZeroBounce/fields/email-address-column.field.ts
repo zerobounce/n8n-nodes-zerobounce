@@ -13,6 +13,5 @@ export const EmailColumnNumber: INodeProperties = {
 		minValue: 1,
 		maxValue: 99,
 	},
-	description:
-		'The column number position of the email address in the file (1..n)',
+	description: 'The column number position of the email address in the file (1..n)',
 };

@@ -156,7 +156,7 @@ async function listFilters(context: IExecuteFunctions, i: number): Promise<INode
 	return [
 		{
 			json: {
-				filters: response
+				filters: response,
 			},
 		},
 	] as INodeExecutionData[];
@@ -188,7 +188,9 @@ async function addOrDeleteFilter(
 	const response = fullResponse.body as IAddFilterResponse | IDeleteFilterResponse | IAltErrorResponse;
 
 	if (isAltErrorResponse(response)) {
-		throw new ApplicationError(`Failed to ${mode === AddOrDelete.ADD ? 'add' : 'delete'} list filter: ${JSON.stringify(response.Error)}`);
+		throw new ApplicationError(
+			`Failed to ${mode === AddOrDelete.ADD ? 'add' : 'delete'} list filter: ${JSON.stringify(response.Error)}`,
+		);
 	}
 
 	return [
