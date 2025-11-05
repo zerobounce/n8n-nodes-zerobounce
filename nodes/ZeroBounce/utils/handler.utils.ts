@@ -413,7 +413,7 @@ export function getNumberParameter(
 	name: string,
 	defaultValue?: number,
 ): number | undefined {
-	const value = context.getNodeParameter(name, i);
+	const value = context.getNodeParameter(name, i, undefined);
 
 	if (value === null || value === undefined || value === '') {
 		return defaultValue;
