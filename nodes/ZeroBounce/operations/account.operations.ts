@@ -10,44 +10,51 @@ import { FilterValue } from '../fields/filter-value.field';
 import { DelayNotice } from '../fields/delay-notice.field';
 import { INodeProperties, NodeHint } from 'n8n-workflow';
 
-// prettier-ignore
 const GetCreditsFields: INodeProperties[] = [
+	// prettier-ignore
 	ApiEndpoint,
 	CreditsRequired,
-].map(addDisplayOptions({
-	resource: [Resources.Account],
-	operation: [Operations.AccountGetCredits],
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Account],
+		operation: [Operations.AccountGetCredits],
+	}),
+);
 
-// prettier-ignore
 const GetApiUsageFields: INodeProperties[] = [
+	// prettier-ignore
 	ApiEndpoint,
 	StartDate,
 	EndDate,
-].map(addDisplayOptions({
-	resource: [Resources.Account],
-	operation: [Operations.AccountGetApiUsage],
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Account],
+		operation: [Operations.AccountGetApiUsage],
+	}),
+);
 
-// prettier-ignore
 const ListFiltersFields: INodeProperties[] = [
+	// prettier-ignore
 	ApiEndpoint,
-].map(addDisplayOptions({
-	resource: [Resources.Account],
-	operation: [Operations.AccountListFilters],
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Account],
+		operation: [Operations.AccountListFilters],
+	}),
+);
 
-// prettier-ignore
 const AddOrDeleteFilterFields: INodeProperties[] = [
 	DelayNotice,
 	ApiEndpoint,
 	FilterRule,
 	FilterTarget,
 	FilterValue,
-].map(addDisplayOptions({
-	resource: [Resources.Account],
-	operation: [Operations.AccountAddFilter, Operations.AccountDeleteFilter],
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Account],
+		operation: [Operations.AccountAddFilter, Operations.AccountDeleteFilter],
+	}),
+);
 
 export const AccountOperations: INodeProperties[] = [
 	// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
@@ -101,26 +108,11 @@ export const AccountOperations: INodeProperties[] = [
 	...AddOrDeleteFilterFields,
 ];
 
+// prettier-ignore
 export const AccountOperationHints: NodeHint[] = [
-	documentationHint(
-		Operations.AccountGetCredits,
-		'ZeroBounce Account: Get Credit Balance',
-		Documentation.GetCreditsBalance,
-	),
+	documentationHint(Operations.AccountGetCredits, 'ZeroBounce Account: Get Credit Balance', Documentation.GetCreditsBalance),
 	documentationHint(Operations.AccountGetApiUsage, 'ZeroBounce Account: Get API Usage', Documentation.GetApiUsage),
-	documentationHint(
-		Operations.AccountListFilters,
-		'ZeroBounce Account: Allowlist and Blocklist',
-		Documentation.AllowlistAndBlocklist,
-	),
-	documentationHint(
-		Operations.AccountAddFilter,
-		'ZeroBounce Account: Allowlist and Blocklist',
-		Documentation.AllowlistAndBlocklist,
-	),
-	documentationHint(
-		Operations.AccountDeleteFilter,
-		'ZeroBounce Account: Allowlist and Blocklist',
-		Documentation.AllowlistAndBlocklist,
-	),
+	documentationHint(Operations.AccountListFilters, 'ZeroBounce Account: Allowlist and Blocklist', Documentation.AllowlistAndBlocklist),
+	documentationHint(Operations.AccountAddFilter, 'ZeroBounce Account: Allowlist and Blocklist', Documentation.AllowlistAndBlocklist),
+	documentationHint(Operations.AccountDeleteFilter, 'ZeroBounce Account: Allowlist and Blocklist', Documentation.AllowlistAndBlocklist),
 ];

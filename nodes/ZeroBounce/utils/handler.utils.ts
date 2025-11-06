@@ -11,13 +11,6 @@ import {
 } from 'n8n-workflow';
 import { ValidationHandler } from '../handlers/validation.handler';
 import AccountHandler from '../handlers/account.handler';
-import {
-	EmailBatchAssignment,
-	EmailBatchFieldType,
-	EmailBatchJson,
-	EmailBatchMapped,
-	EmailBatchType,
-} from '../fields/email-batch.field';
 import { Mode, Resources } from '../enums';
 // eslint-disable-next-line @n8n/community-nodes/no-restricted-imports
 import { Readable } from 'node:stream';
@@ -25,18 +18,34 @@ import { FileId } from '../fields/file-id.field';
 import { ScoringHandler } from '../handlers/scoring.handler';
 import { CombineItems } from '../fields/combine-items.field';
 import { EmailFinderHandler } from '../handlers/email-finder.handler';
+import {
+	IMappedValues,
+	ItemInputAssignment,
+	ItemInputJson,
+	ItemInputMapped,
+	ItemInputOptions,
+	ItemInputType,
+} from '../fields/item-input.field';
 
 export interface IOperationHandler {
 	handle(context: IExecuteFunctions, operation: string, i: number): Promise<INodeExecutionData[]>;
 }
 
-export interface IEmailEntry {
+export interface IItemInputEntry {
+	[key: string]: string | undefined;
+}
+
+export interface IEmailEntry extends IItemInputEntry {
 	email_address: string;
 	ip_address?: string;
 }
 
-export interface IEmailBatch {
-	emailBatch: Array<IEmailEntry>;
+export interface IEmailFinderEntry extends IItemInputEntry {
+	domain: string;
+	first_name?: string;
+	last_name?: string;
+	middle_name?: string;
+	full_name?: string;
 }
 
 export interface IErrorResponse extends IDataObject {
@@ -104,6 +113,17 @@ export const isNotBlank = (value: string | null | undefined): boolean => !isBlan
 export const defaultString = (value: string | null | undefined, defaultValue = ''): string =>
 	isBlank(value) ? defaultValue : value;
 
+/**
+ * Type guard to determine whether a given value is a valid {@link IEmailEntry}.
+ *
+ * A valid email entry must:
+ * - Be a non-null object.
+ * - Contain a property `email_address` of type `string`.
+ * - Have a non-empty (non-blank) `email_address` value.
+ *
+ * @param obj - The value to test.
+ * @returns `true` if the object satisfies the {@link IEmailEntry} interface; otherwise `false`.
+ */
 export function isEmailEntry(obj: unknown): obj is IEmailEntry {
 	return (
 		obj !== null &&
@@ -114,39 +134,120 @@ export function isEmailEntry(obj: unknown): obj is IEmailEntry {
 	);
 }
 
+/**
+ * Type guard to determine whether a given value is a valid {@link IEmailFinderEntry}.
+ *
+ * A valid domain entry must:
+ * - Be a non-null object.
+ * - Contain a non-empty string property `domain`.
+ * - Contain **either**:
+ *   - A non-empty string property `first_name`, **or**
+ *   - A non-empty string property `full_name`.
+ *
+ * @param obj - The value to test.
+ * @returns `true` if the object satisfies the {@link IEmailFinderEntry} structure; otherwise `false`.
+ */
+export function isEmailFinderEntry(obj: unknown): obj is IEmailFinderEntry {
+	return (
+		obj !== null &&
+		typeof obj === 'object' &&
+		'domain' in obj &&
+		typeof obj.domain === 'string' &&
+		isNotBlank(obj.domain) &&
+		(('first_name' in obj && typeof obj.first_name === 'string' && isNotBlank(obj.first_name)) ||
+			('full_name' in obj && typeof obj.full_name === 'string' && isNotBlank(obj.full_name)))
+	);
+}
+
+function isNative(value: unknown, mode: Mode): value is IEmailEntry | IEmailFinderEntry {
+	switch (mode) {
+		case Mode.VALIDATION:
+		case Mode.SCORING:
+			return isEmailEntry(value);
+		case Mode.EMAIL_FINDER:
+			return isEmailFinderEntry(value);
+	}
+}
+
+function nameOfRequiredValue(mode: Mode): string {
+	switch (mode) {
+		case Mode.VALIDATION:
+		case Mode.SCORING:
+			return 'email address';
+		case Mode.EMAIL_FINDER:
+			return 'domain and either a first name or full name';
+	}
+}
+
+function expectedFormat(mode: Mode): string {
+	switch (mode) {
+		case Mode.VALIDATION:
+			return '{"email_address": "...", "ip_address"?: "..."}';
+		case Mode.SCORING:
+			return '{"email_address": "..."}';
+		case Mode.EMAIL_FINDER:
+			return '{"domain": "...", "first_name": "..."}';
+	}
+}
+
+function expectedFields(mode: Mode): string {
+	switch (mode) {
+		case Mode.VALIDATION:
+			return "either 'email' or 'ip' e.g. 'email-address', 'IP_ADDRESS', 'personalEmail' etc.";
+		case Mode.SCORING:
+			return "'email' e.g. 'email-address', 'EMAIL', 'personalEmail' etc.";
+		case Mode.EMAIL_FINDER:
+			return "either 'domain' or 'name' e.g. 'domain', 'DOMAIN', 'emailDomain', 'first_name', 'full_name' etc.";
+	}
+}
+
+function uniqueValue(value: IItemInputEntry, mode: Mode): string {
+	switch (mode) {
+		case Mode.VALIDATION:
+		case Mode.SCORING:
+			return (value as IEmailEntry).email_address;
+		case Mode.EMAIL_FINDER: {
+			const entry = value as IEmailFinderEntry;
+			return entry.domain + ',' + defaultString(entry.first_name)  + ',' + defaultString(entry.full_name);
+		}
+	}
+}
+
 export function invalidEmailEntry(obj: NodeParameterValueType | object): boolean {
 	return !isEmailEntry(obj);
 }
 
-export function validateEmailBatch(emailBatch: unknown): asserts emailBatch is IEmailEntry[] {
-	if (!Array.isArray(emailBatch)) {
+export function validateItemInputEntries(entries: unknown, mode: Mode): asserts entries is IItemInputEntry[] {
+	if (!Array.isArray(entries)) {
 		throw new ApplicationError(
-			'Invalid email batch format. Expected an array of objects like: [{"email_address": "...", "ip_address": "..."},{"email_address": "...", "ip_address": "..."}...]',
+			`Invalid entry format. Expected an array of objects like: [${expectedFormat(mode)},${expectedFormat(mode)}...]`,
 		);
 	}
 
-	for (let idx = 0; idx < emailBatch.length; idx++) {
-		const entry = emailBatch[idx];
-		if (!isEmailEntry(entry)) {
+	for (let idx = 0; idx < entries.length; idx++) {
+		const entry = entries[idx];
+		if (!isNative(entry, mode)) {
 			throw new ApplicationError(
-				`Invalid entry at position ${idx + 1}: ${JSON.stringify(entry)}. Expected {"email_address": "...", "ip_address"?: "..."}`,
+				`Invalid entry at position ${idx + 1}: ${JSON.stringify(entry)}. Expected ${expectedFormat(mode)}`,
 			);
 		}
 	}
 
-	if (emailBatch.length === 0) {
-		throw new ApplicationError('Email batch is empty');
+	if (entries.length === 0) {
+		throw new ApplicationError('No entries');
 	}
 }
 
-export function convertAssignments(obj: object | NodeParameterValueType, mode: Mode): IEmailEntry[] {
+export function convertAssignments(obj: object | NodeParameterValueType, mode: Mode): IItemInputEntry[] {
 	const assignments: AssignmentValue[] = (obj as AssignmentCollectionValue)?.assignments;
 
 	if (!assignments || !Array.isArray(assignments) || assignments.length == 0) {
-		throw new ApplicationError('Invalid assignment value: Value missing, must include at least one email address.');
+		throw new ApplicationError(
+			`Invalid assignment value: Value missing, must include at least one ${nameOfRequiredValue(mode)}.`,
+		);
 	}
 
-	const entries: IEmailEntry[] = [];
+	const entries: IItemInputEntry[] = [];
 
 	for (let i = 0; i < assignments.length; i++) {
 		const assignment = assignments[i];
@@ -156,12 +257,7 @@ export function convertAssignments(obj: object | NodeParameterValueType, mode: M
 	return entries;
 }
 
-function convertAssignmentEntry(
-	assignmentEntry: AssignmentValue,
-	idx: number,
-	mode: Mode,
-	entries: IEmailEntry[],
-): IEmailEntry[] {
+function convertAssignmentEntry(assignmentEntry: AssignmentValue, idx: number, mode: Mode, entries: IItemInputEntry[]) {
 	if (!assignmentEntry.value) {
 		throw new ApplicationError(`Invalid assignment value at position ${idx + 1}: Value is missing.`);
 	}
@@ -174,7 +270,7 @@ function convertAssignmentEntry(
 		case 'string':
 		case 'array':
 		case 'object': {
-			convertValueToEmailEntries(name, value, idx, mode, entries);
+			convertValueToEntries(name, value, idx, mode, entries);
 			break;
 		}
 		default: {
@@ -186,30 +282,29 @@ function convertAssignmentEntry(
 
 	if (entries.length === 0) {
 		throw new ApplicationError(
-			`Invalid assignment value '${name}' at position ${idx + 1}: Value must contain at least one email address.`,
+			`Invalid assignment value '${name}' at position ${idx + 1}: Value must contain at least one ${nameOfRequiredValue(mode)}.`,
 		);
 	}
-
-	return entries;
 }
 
-export function convertValueToEmailEntries(
+export function convertValueToEntries(
 	name: string,
 	value: unknown,
 	idx: number,
 	mode: Mode,
-	entries: IEmailEntry[],
+	entries: IItemInputEntry[],
 ): void {
 	// Loop and convert all values in arrays
 	if (Array.isArray(value)) {
-		for (const subValue of value) {
-			convertValueToEmailEntries(name, subValue, idx, mode, entries);
+		for (let subIdx = 0; subIdx < value.length; subIdx++) {
+			const subValue = value[subIdx];
+			convertValueToEntries(name, subValue, subIdx, mode, entries);
 		}
 		return;
 	}
 
 	// If it's already in the correct format, add it
-	if (isEmailEntry(value)) {
+	if (isNative(value, mode)) {
 		entries.push(value);
 		return;
 	}
@@ -223,39 +318,52 @@ export function convertValueToEmailEntries(
 	// If it's an object, split into object entries and handle
 	if (typeof value === 'object' && value !== null) {
 		for (const [key, subValue] of Object.entries(value)) {
-			convertValueToEmailEntries(key, subValue, idx, mode, entries);
+			convertValueToEntries(key, subValue, idx, mode, entries);
 		}
 		return;
 	}
 
-	if (mode === Mode.VALIDATION) {
-		throw new ApplicationError(
-			`Invalid assignment value '${name}' at position ${idx + 1}: Field name is expected to contain either 'email' or 'ip' e.g. 'email-address', 'IP_ADDRESS', 'personalEmail' etc.`,
-		);
-	} else {
-		throw new ApplicationError(
-			`Invalid assignment value '${name}' at position ${idx + 1}: Field name is expected to contain 'email' e.g. 'email-address', 'EMAIL', 'personalEmail' etc.`,
-		);
-	}
+	throw new ApplicationError(
+		`Invalid assignment value '${name}' at position ${idx + 1}: Field name is expected to contain ${expectedFields(mode)}`,
+	);
 }
 
-function convertStringValue(value: string, name: string, idx: number, mode: Mode, entries: IEmailEntry[]): void {
-	// Expect either an email or ip address for string values
-	if (name.includes('email')) {
-		entries.push({ email_address: value });
-		return;
-	}
-
-	if (mode === Mode.VALIDATION) {
-		if (name.includes('ip')) {
-			if (entries.length === 0) {
-				throw new ApplicationError(
-					`Invalid assignment value '${name}' at position ${idx + 1}: Expected email field before ip field.`,
-				);
+function convertStringValue(value: string, name: string, idx: number, mode: Mode, entries: IItemInputEntry[]): void {
+	switch (mode) {
+		case Mode.VALIDATION: {
+			// Expect either an email or ip address for string values
+			if (name.includes('email')) {
+				entries.push({ email_address: value });
+				return;
 			}
-			// Add the ip_address to the previous IEmailEntry
-			entries[entries.length - 1].ip_address = value;
-			return;
+
+			if (name.includes('ip')) {
+				if (entries.length === 0) {
+					throw new ApplicationError(
+						`Invalid assignment value '${name}' at position ${idx + 1}: Expected email field before ip field.`,
+					);
+				}
+				// Add the ip_address to the previous IEmailEntry
+				entries[entries.length - 1].ip_address = value;
+				return;
+			}
+			break;
+		}
+		case Mode.SCORING: {
+			// Expect an email address for string values
+			if (name.includes('email')) {
+				entries.push({ email_address: value });
+				return;
+			}
+			break;
+		}
+		case Mode.EMAIL_FINDER: {
+			// Expect a domain for string values
+			if (name.includes('domain')) {
+				entries.push({ domain: value });
+				return;
+			}
+			break;
 		}
 	}
 }
@@ -264,7 +372,7 @@ function isString(value: unknown): value is string {
 	return typeof value === 'string';
 }
 
-function convertJson(json: unknown, mode: Mode): IEmailEntry[] {
+function convertJson(json: unknown, mode: Mode): IItemInputEntry[] {
 	if (!isString(json) || isBlank(json)) {
 		throw new ApplicationError('Invalid JSON value');
 	}
@@ -274,15 +382,33 @@ function convertJson(json: unknown, mode: Mode): IEmailEntry[] {
 	try {
 		value = JSON.parse(json);
 	} catch (err) {
-		throw new ApplicationError('Failed to parse email batch JSON: ' + (err as Error).message);
+		throw new ApplicationError(`Failed to parse ${nameOfRequiredValue(mode)} JSON: ` + (err as Error).message);
 	}
 
-	const entries: IEmailEntry[] = [];
+	return convertToEntries(value, mode, ItemInputOptions.JSON);
+}
 
-	convertValueToEmailEntries('email_batch', value, 0, mode, entries);
+function convertToEntries(value: unknown, mode: Mode, itemInputType: ItemInputOptions): IItemInputEntry[] {
+	let name: string;
+
+	switch (mode) {
+		case Mode.VALIDATION:
+		case Mode.SCORING:
+			name = 'emails';
+			break;
+		case Mode.EMAIL_FINDER:
+			name = 'values';
+			break;
+	}
+
+	const entries: IItemInputEntry[] = [];
+
+	convertValueToEntries(name, value, 0, mode, entries);
 
 	if (entries.length === 0) {
-		throw new ApplicationError('Invalid JSON value: Value must contain at least one email address');
+		throw new ApplicationError(
+			`Invalid ${itemInputType.toLowerCase()} value: Value must contain at least one ${nameOfRequiredValue(mode)}`,
+		);
 	}
 
 	return entries;
@@ -297,37 +423,37 @@ function convertJson(json: unknown, mode: Mode): IEmailEntry[] {
  * @param mode - Validate or Scoring
  * @throws ApplicationError if the data format is invalid
  */
-export function convertEmailBatch(context: IExecuteFunctions, i: number, mode: Mode): IEmailEntry[] {
-	const emailBatchType = context.getNodeParameter(EmailBatchType.name, i) as EmailBatchFieldType;
+export function convertItemInput(context: IExecuteFunctions, i: number, mode: Mode): IItemInputEntry[] {
+	const itemInputType = context.getNodeParameter(ItemInputType.name, i) as ItemInputOptions;
 
-	let emailBatch: IEmailEntry[];
+	let entries: IItemInputEntry[];
 
-	switch (emailBatchType) {
-		case EmailBatchFieldType.ASSIGNMENT: {
-			const value = context.getNodeParameter(EmailBatchAssignment.name, i);
-			emailBatch = convertAssignments(value, mode);
+	switch (itemInputType) {
+		case ItemInputOptions.ASSIGNMENT: {
+			const value = context.getNodeParameter(ItemInputAssignment.name, i);
+			entries = convertAssignments(value, mode);
 			break;
 		}
 
-		case EmailBatchFieldType.JSON: {
-			const value = context.getNodeParameter(EmailBatchJson.name, i);
-			emailBatch = convertJson(value, mode);
+		case ItemInputOptions.JSON: {
+			const value = context.getNodeParameter(ItemInputJson.name, i);
+			entries = convertJson(value, mode);
 			break;
 		}
 
-		case EmailBatchFieldType.MAPPED: {
-			const value = context.getNodeParameter(EmailBatchMapped.name, i) as IEmailBatch;
-			emailBatch = value.emailBatch;
+		case ItemInputOptions.MAPPED: {
+			const mapped = context.getNodeParameter(ItemInputMapped.name, i) as IMappedValues;
+			entries = convertToEntries(mapped.mappedValues, mode, itemInputType);
 			break;
 		}
 
 		default:
-			throw new ApplicationError(`Unsupported email batch type '${emailBatchType}'`);
+			throw new ApplicationError(`Unsupported email batch type '${itemInputType}'`);
 	}
 
-	validateEmailBatch(emailBatch);
+	validateItemInputEntries(entries, mode);
 
-	return emailBatch;
+	return entries;
 }
 
 const filenamePattern = /filename="?([^"]+)"?/;
@@ -362,11 +488,11 @@ export function getBinaryData(context: IExecuteFunctions, i: number, binaryKey: 
 	return context.helpers.assertBinaryData(i, binaryKey);
 }
 
-export interface IValidationResult {
+export interface IStringFields {
 	[key: string]: string;
 }
 
-export function toValidationResult(header: string[], values: string[]): IValidationResult {
+export function toFields(header: string[], values: string[]): IStringFields {
 	return Object.fromEntries(header.map((k: string, i: number): [string, string] => [k, values[i]]));
 }
 
@@ -434,7 +560,7 @@ export interface CsvOutput {
 	lineCount: number;
 }
 
-export async function convertBatchToCsv(
+export async function convertEntriesToCsv(
 	context: IExecuteFunctions,
 	i: number,
 	combineItems: boolean,
@@ -449,32 +575,47 @@ export async function convertBatchToCsv(
 		);
 	}
 
-	const emailBatch: IEmailEntry[] = [];
+	const entries: IItemInputEntry[] = [];
 
-	if (combineItems) {
-		const uniqueEntries: Map<string, IEmailEntry> = new Map();
+	if (combineItems && inputItems > 1) {
+		const uniqueEntries: Map<string, IItemInputEntry> = new Map();
 
 		// Get data from all input items and combine them into a single file
 		for (let item = 0; item < inputItems; item++) {
-			const entries = convertEmailBatch(context, item, mode);
-			for (const entry of entries) {
-				uniqueEntries.set(entry.email_address, entry);
+			const itemEntries = convertItemInput(context, item, mode);
+			for (const entry of itemEntries) {
+				uniqueEntries.set(uniqueValue(entry, mode), entry);
 			}
 		}
-		emailBatch.push(...uniqueEntries.values());
+		entries.push(...uniqueEntries.values());
 	} else {
 		// Only get the data for the current inputItem
-		emailBatch.push(...convertEmailBatch(context, i, mode));
+		entries.push(...convertItemInput(context, i, mode));
 	}
 
 	let rows: string[][];
 
-	if (mode === Mode.VALIDATION) {
-		rows = [['email_address', 'ip_address']];
-		rows.push(...emailBatch.map((e) => [e.email_address, e.ip_address ?? '']));
-	} else {
-		rows = [['email_address']];
-		rows.push(...emailBatch.map((e) => [e.email_address]));
+	switch (mode) {
+		case Mode.VALIDATION:
+			rows = [['email_address', 'ip_address']];
+			rows.push(...(entries as IEmailEntry[]).map((e) => [e.email_address, defaultString(e.ip_address)]));
+			break;
+		case Mode.SCORING:
+			rows = [['email_address']];
+			rows.push(...(entries as IEmailEntry[]).map((e) => [e.email_address]));
+			break;
+		case Mode.EMAIL_FINDER:
+			rows = [['domain', 'first_name', 'last_name', 'middle_name', 'full_name']];
+			rows.push(
+				...(entries as IEmailFinderEntry[]).map((e) => [
+					e.domain,
+					defaultString(e.first_name),
+					defaultString(e.last_name),
+					defaultString(e.middle_name),
+					defaultString(e.full_name),
+				]),
+			);
+			break;
 	}
 
 	return {
@@ -487,7 +628,7 @@ export async function convertBatchToCsv(
 	};
 }
 
-export async function convertFileToFields(binaryData: IBinaryData): Promise<IValidationResult[]> {
+export async function convertFileToFields(binaryData: IBinaryData): Promise<IStringFields[]> {
 	let lines: string[] = Buffer.from(binaryData.data, 'base64').toString('utf8').trim().split(/\r?\n/);
 
 	const header: string[] = splitLine(lines[0]);
@@ -498,5 +639,5 @@ export async function convertFileToFields(binaryData: IBinaryData): Promise<IVal
 		lines = lines.slice(1, -1);
 	}
 
-	return lines.map((line: string): IValidationResult => toValidationResult(header, splitLine(line)));
+	return lines.map((line: string): IStringFields => toFields(header, splitLine(line)));
 }

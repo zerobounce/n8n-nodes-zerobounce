@@ -1,7 +1,7 @@
 import { IRequestParams, zbGetFileRequest, zbGetRequest, zbPostRequest } from './request.utils';
 import { ApplicationError, IBinaryData, IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
 import {
-	convertBatchToCsv,
+	convertEntriesToCsv,
 	convertFileToFields,
 	CsvOutput,
 	defaultString,
@@ -10,21 +10,26 @@ import {
 	getFileNameFromHeader,
 	getNumberParameter,
 	isBinary,
-	isNotBlank,
 } from './handler.utils';
 import { BaseUrl, BulkEndpoint, Mode } from '../enums';
 import { SendFileInputFieldType, SendFileInputType } from '../fields/send-file-input-type.field';
 import { FileName } from '../fields/file-name.field';
 import { BinaryKey } from '../fields/binary-key.field';
 import { HasHeader } from '../fields/has-header.field';
-import { EmailColumnNumber } from '../fields/email-address-column.field';
-import { IpAddressColumnNumber } from '../fields/ip-address-column.field';
-import { ReturnUrl } from '../fields/return-url.field';
-import { RemoveDuplicates } from '../fields/remove-duplicates.field';
 import { ActivityData } from '../fields/activity-data.field';
 import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-output-type.field';
 import { Batch } from '../fields/batch.field';
 import { CombineItems } from '../fields/combine-items.field';
+import { EmailColumnNumber } from '../fields/email-address-column.field';
+import { IpAddressColumnNumber } from '../fields/ip-address-column.field';
+import { RemoveDuplicates } from '../fields/remove-duplicates.field';
+import { DomainColumnNumber } from '../fields/domain-column.field';
+import {
+	FirstNameColumnNumber,
+	FullNameColumnNumber,
+	LastNameColumnNumber,
+	MiddleNameColumnNumber,
+} from '../fields/email-finder.field';
 
 export interface IBulkErrorResponse extends IDataObject {
 	success: boolean;
@@ -36,13 +41,47 @@ export function isBulkErrorResponse(response: unknown): response is IBulkErrorRe
 	return typeof response === 'object' && response !== null && 'success' in response && response.success === false;
 }
 
+interface ISendFileBaseRequest {
+	has_header_row: boolean;
+}
+
+interface ISendFileValidationRequest extends ISendFileBaseRequest {
+	remove_duplicate: boolean;
+	return_url: string;
+	email_address_column: number;
+	ip_address_column?: number;
+}
+
+interface ISendFileScoringRequest extends ISendFileBaseRequest {
+	remove_duplicate: boolean;
+	return_url: string;
+	email_address_column: number;
+}
+
+interface ISendFileEmailFinderRequest extends ISendFileBaseRequest {
+	domain_column: number; // The column index of the domain in the file. Index starts from 1. (Required)
+	first_name_column?: number; // The column index of the first name column. (Either one of the first name column or the full name column is mandatory)
+	last_name_column?: number; // The column index of the last name column. (Optional)
+	middle_name_column?: number; // The column index of the middle name column. (Optional)
+	full_name_column?: number; // The column index of the full name column. (Either one of the first name column or the full name column is mandatory)
+}
+
+interface ISendFileDetails {
+	request: ISendFileValidationRequest | ISendFileScoringRequest | ISendFileEmailFinderRequest;
+	endpoint: BulkEndpoint;
+	binaryData: IBinaryData;
+	buffer: string | Buffer;
+	combineItems: boolean;
+	itemCount?: number;
+}
+
 export interface ISendFileResponse extends IDataObject {
 	success: boolean;
 	message: string;
 	file_name: string;
 	file_id: string;
 	return_url?: string; // Added to the returned response for later use
-	email_count?: number; // Added to the returned response for info
+	item_count?: number; // Added to the returned response for info
 }
 
 export interface IFileStatusRequest extends IRequestParams {
@@ -73,6 +112,90 @@ export interface IDeleteFileResponse extends IDataObject {
 	message: string;
 	file_name: string;
 	file_id: string;
+}
+
+async function sendFileDetails(
+	context: IExecuteFunctions,
+	i: number,
+	mode: Mode,
+	inputType: SendFileInputFieldType,
+	fileName?: string,
+): Promise<ISendFileDetails> {
+	const details = {} as ISendFileDetails;
+
+	switch (mode) {
+		case Mode.VALIDATION:
+			details.request = {
+				email_address_column: 1,
+				ip_address_column: 2,
+			} as ISendFileValidationRequest;
+			details.endpoint = BulkEndpoint.SendFile;
+			break;
+		case Mode.SCORING:
+			details.request = {
+				email_address_column: 1,
+			} as ISendFileScoringRequest;
+			details.endpoint = BulkEndpoint.ScoringSendFile;
+			break;
+		case Mode.EMAIL_FINDER: {
+			details.request = {
+				domain_column: 1,
+				first_name_column: 2,
+				last_name_column: 3,
+				middle_name_column: 4,
+				// full_name_column: 5,
+			} as ISendFileEmailFinderRequest;
+			details.endpoint = BulkEndpoint.EmailFinderSendFile;
+			break;
+		}
+	}
+
+	if (inputType === SendFileInputFieldType.FILE) {
+		const binaryKey = context.getNodeParameter(BinaryKey.name, i) as string;
+		details.binaryData = getBinaryData(context, i, binaryKey);
+		details.buffer = await context.helpers.getBinaryDataBuffer(i, binaryKey);
+		details.request.has_header_row = context.getNodeParameter(HasHeader.name, i) as boolean;
+
+		if (mode === Mode.VALIDATION || mode === Mode.SCORING) {
+			const request = details.request as ISendFileValidationRequest | ISendFileScoringRequest;
+			request.email_address_column = getNumberParameter(context, i, EmailColumnNumber.name, 1) as number;
+			request.remove_duplicate = context.getNodeParameter(RemoveDuplicates.name, i) as boolean;
+
+			if (mode === Mode.VALIDATION) {
+				(request as ISendFileValidationRequest).ip_address_column = getNumberParameter(
+					context,
+					i,
+					IpAddressColumnNumber.name,
+					2,
+				);
+			}
+		} else if (mode === Mode.EMAIL_FINDER) {
+			const request = details.request as ISendFileEmailFinderRequest;
+			request.domain_column = getNumberParameter(context, i, DomainColumnNumber.name, 1) as number;
+			request.first_name_column = getNumberParameter(context, i, FirstNameColumnNumber.name);
+			request.last_name_column = getNumberParameter(context, i, LastNameColumnNumber.name);
+			request.middle_name_column = getNumberParameter(context, i, MiddleNameColumnNumber.name);
+			request.full_name_column = getNumberParameter(context, i, FullNameColumnNumber.name);
+		}
+	} else {
+		details.combineItems = context.getNodeParameter(CombineItems.name, i, true, { ensureType: 'boolean' }) as boolean;
+
+		// Only process the first execution if combine items is enabled
+		if (!details.combineItems || i === 0) {
+			const csvOutput: CsvOutput = await convertEntriesToCsv(context, i, details.combineItems, mode);
+
+			details.binaryData = await context.helpers.prepareBinaryData(
+				Buffer.from(csvOutput.contents, 'utf8'),
+				defaultString(fileName, 'n8n_email_batch.csv'),
+				'text/csv',
+			);
+			details.buffer = csvOutput.contents;
+			details.itemCount = csvOutput.lineCount - 1;
+			details.request.has_header_row = true;
+		}
+	}
+
+	return details;
 }
 
 /**
@@ -129,76 +252,25 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 		throw new ApplicationError('Please select input type');
 	}
 
-	let fileName = context.getNodeParameter(FileName.name, i) as string | undefined;
+	let fileName: string | undefined = context.getNodeParameter(FileName.name, i) as string | undefined;
 
-	let binaryData: IBinaryData;
-	let buffer: Buffer | string;
-	let hasHeader: boolean;
-	let emailColumnNumber: number;
-	let ipAddressColumnNumber: number | undefined;
-	let emailCount: number | undefined = undefined;
+	const details: ISendFileDetails = await sendFileDetails(context, i, mode, inputType, fileName);
 
-	switch (inputType) {
-		case SendFileInputFieldType.FILE: {
-			const binaryKey = context.getNodeParameter(BinaryKey.name, i) as string;
-			binaryData = getBinaryData(context, i, binaryKey);
-			buffer = await context.helpers.getBinaryDataBuffer(i, binaryKey);
-			hasHeader = context.getNodeParameter(HasHeader.name, i) as boolean;
-			emailColumnNumber = getNumberParameter(context, i, EmailColumnNumber.name, 1) as number;
-			if (mode === Mode.VALIDATION) {
-				ipAddressColumnNumber = getNumberParameter(context, i, IpAddressColumnNumber.name, 2) as number;
-			}
-			break;
-		}
+	// Get the filename to use from the binary data if not overridden
+	fileName = defaultString(fileName, details.binaryData.fileName);
 
-		case SendFileInputFieldType.EMAIL_BATCH: {
-			const combineItems = context.getNodeParameter(CombineItems.name, i, true, { ensureType: 'boolean' }) as boolean;
-
-			// Only process the first execution if combine items is enabled
-			if (combineItems && i > 0) {
-				return [];
-			}
-
-			const csvOutput: CsvOutput = await convertBatchToCsv(context, i, combineItems, mode);
-
-			binaryData = await context.helpers.prepareBinaryData(
-				Buffer.from(csvOutput.contents, 'utf8'),
-				defaultString(fileName, 'n8n_email_batch.csv'),
-				'text/csv',
-			);
-			buffer = csvOutput.contents;
-			hasHeader = true;
-			emailColumnNumber = 1;
-			ipAddressColumnNumber = 2;
-			emailCount = csvOutput.lineCount - 1;
-			break;
-		}
-	}
-
-	fileName = defaultString(fileName, binaryData.fileName);
-
-	const blob = new Blob([buffer], { type: 'text/csv' });
-	const returnUrl = context.getNodeParameter(ReturnUrl.name, i) as string;
-	const removeDuplicates = context.getNodeParameter(RemoveDuplicates.name, i) as boolean;
+	const blob = new Blob([details.buffer], { type: 'text/csv' });
 
 	const formData = new FormData();
 
 	formData.append('file', blob, fileName);
 
-	if (isNotBlank(returnUrl)) {
-		formData.append('return_url', returnUrl);
+	// Append all values from the request object to the form
+	for (const [key, value] of Object.entries(details.request)) {
+		formData.append(key, value);
 	}
 
-	formData.append('has_header_row', hasHeader);
-	formData.append('remove_duplicate', removeDuplicates);
-	formData.append('email_address_column', emailColumnNumber);
-
-	if (mode === Mode.VALIDATION && ipAddressColumnNumber) {
-		formData.append('ip_address_column', ipAddressColumnNumber);
-	}
-
-	const endpoint = mode === Mode.VALIDATION ? BulkEndpoint.SendFile : BulkEndpoint.ScoringSendFile;
-	const fullResponse = await zbPostRequest(context, BaseUrl.BULK, endpoint, formData);
+	const fullResponse = await zbPostRequest(context, BaseUrl.BULK, details.endpoint, formData);
 	const response = fullResponse.body as ISendFileResponse | IBulkErrorResponse;
 
 	if (isBulkErrorResponse(response)) {
@@ -206,10 +278,13 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 		throw new ApplicationError('Error sending file: ' + error);
 	}
 
-	response.return_url = returnUrl;
-	response.email_count = emailCount;
+	if ('return_url' in details.request) {
+		response.return_url = details.request.return_url;
+	}
 
-	const binary = inputType === SendFileInputFieldType.FILE ? undefined : { data: binaryData };
+	response.item_count = details.itemCount;
+
+	const binary = inputType === SendFileInputFieldType.FILE ? undefined : { data: details.binaryData };
 
 	return [
 		{
@@ -296,24 +371,33 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 export async function getFile(context: IExecuteFunctions, i: number, mode: Mode): Promise<INodeExecutionData[]> {
 	const fileId = getFileId(context, i);
 	let request: IGetFileRequest;
-	let activityData: boolean | undefined;
+	let endpoint: BulkEndpoint;
 
-	if (mode == Mode.VALIDATION) {
-		const activityData = context.getNodeParameter(ActivityData.name, i) as boolean;
+	switch (mode) {
+		case Mode.VALIDATION: {
+			endpoint = BulkEndpoint.GetFile;
 
-		request = {
-			file_id: fileId,
-			activityData: activityData,
-		};
-	} else {
-		activityData = undefined;
-
-		request = {
-			file_id: fileId,
-		};
+			request = {
+				file_id: fileId,
+				activityData: context.getNodeParameter(ActivityData.name, i) as boolean,
+			};
+			break;
+		}
+		case Mode.SCORING: {
+			endpoint = BulkEndpoint.ScoringGetFile;
+			request = {
+				file_id: fileId,
+			};
+			break;
+		}
+		case Mode.EMAIL_FINDER:
+			endpoint = BulkEndpoint.EmailFinderGetFile;
+			request = {
+				file_id: fileId,
+			};
+			break;
 	}
 
-	const endpoint = mode === Mode.VALIDATION ? BulkEndpoint.GetFile : BulkEndpoint.ScoringGetFile;
 	const fullResponse = await zbGetFileRequest(context, endpoint, request);
 	const headers = fullResponse.headers;
 	const response = fullResponse.body;
@@ -346,7 +430,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 			file_name: binaryData.fileName,
 			remote_file_name: remoteFilename,
 			file_size: headers['content-length'],
-			activity_data: activityData,
+			activity_data: request.activityData,
 			item_number: undefined,
 			total_items: undefined,
 		},
@@ -444,7 +528,22 @@ export async function fileStatus(context: IExecuteFunctions, i: number, mode: Mo
 		file_id: fileId,
 	};
 
-	const endpoint = mode == Mode.VALIDATION ? BulkEndpoint.FileStatus : BulkEndpoint.ScoringFileStatus;
+	let endpoint: BulkEndpoint;
+
+	switch (mode) {
+		case Mode.VALIDATION: {
+			endpoint = BulkEndpoint.FileStatus;
+			break;
+		}
+		case Mode.SCORING: {
+			endpoint = BulkEndpoint.ScoringFileStatus;
+			break;
+		}
+		case Mode.EMAIL_FINDER:
+			endpoint = BulkEndpoint.EmailFinderFileStatus;
+			break;
+	}
+
 	const fullResponse = await zbGetRequest(context, BaseUrl.BULK, endpoint, request);
 	const response = fullResponse.body as IFileStatusResponse | IBulkErrorResponse;
 
@@ -520,7 +619,22 @@ export async function deleteFile(context: IExecuteFunctions, i: number, mode: Mo
 		file_id: fileId,
 	};
 
-	const endpoint = mode == Mode.VALIDATION ? BulkEndpoint.DeleteFile : BulkEndpoint.ScoringDeleteFile;
+	let endpoint: BulkEndpoint;
+
+	switch (mode) {
+		case Mode.VALIDATION: {
+			endpoint = BulkEndpoint.DeleteFile;
+			break;
+		}
+		case Mode.SCORING: {
+			endpoint = BulkEndpoint.ScoringDeleteFile;
+			break;
+		}
+		case Mode.EMAIL_FINDER:
+			endpoint = BulkEndpoint.EmailFinderDeleteFile;
+			break;
+	}
+
 	const fullResponse = await zbGetRequest(context, BaseUrl.BULK, endpoint, request);
 	const response = fullResponse.body as IDeleteFileResponse | IBulkErrorResponse;
 

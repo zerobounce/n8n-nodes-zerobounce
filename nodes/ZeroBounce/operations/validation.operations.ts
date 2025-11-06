@@ -2,7 +2,6 @@ import { Timeout } from '../fields/timeout.field';
 import { ActivityData } from '../fields/activity-data.field';
 import { VerifyPlus } from '../fields/verify-plus.field';
 import { Email } from '../fields/email.field';
-import { EmailBatchAssignment, EmailBatchJson, EmailBatchMapped, EmailBatchType } from '../fields/email-batch.field';
 import { ApiEndpoint } from '../fields/api-endpoint.field';
 import { IpAddress } from '../fields/ip-address.field';
 import { addDisplayOptions, combineItemsHint, documentationHint, multipleInputItemsHint } from '../utils/field.utils';
@@ -20,65 +19,81 @@ import { SendFileInputFieldType, SendFileInputType } from '../fields/send-file-i
 import { FileId } from '../fields/file-id.field';
 import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-output-type.field';
 import { Batch } from '../fields/batch.field';
+import { ItemInputAssignment, ItemInputJson, ItemInputMapped, ItemInputType } from '../fields/item-input.field';
 
-// prettier-ignore
 const ValidateFields: INodeProperties[] = [
+	// prettier-ignore
 	ApiEndpoint,
 	Timeout,
 	ActivityData,
 	VerifyPlus,
 	Email,
 	IpAddress,
-].map(addDisplayOptions({
-	resource: [Resources.Validation],
-	operation: [Operations.ValidationValidate]
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Validation],
+		operation: [Operations.ValidationValidate],
+	}),
+);
 
-// prettier-ignore
-const BatchValidateFields: INodeProperties[] = [
-	Timeout,
-	ActivityData,
-	VerifyPlus,
-	EmailBatchType,
-	EmailBatchAssignment,
-	EmailBatchJson,
-	EmailBatchMapped,
-].map(addDisplayOptions({
-	resource: [Resources.Validation],
-	operation: [Operations.ValidationBatchValidate]
-}));
-
-// prettier-ignore
-const EmailBatchFields: INodeProperties[] = [
-	CombineItems,
-	EmailBatchType,
-	EmailBatchAssignment,
-	EmailBatchJson,
-	EmailBatchMapped,
+const ValidateItemInputFields: INodeProperties[] = [
+	ItemInputType,
+	{
+		...ItemInputAssignment,
+		description: 'Email(s) or email objects (and optional IPs) to validate',
+	},
+	{
+		...ItemInputJson,
+		default: '[\n  {"email_address": "valid@example.com", "ip_address": ""}\n]',
+		description: 'JSON containing one or more email or email objects (and optional IPs) to validate',
+	},
+	{
+		...ItemInputMapped,
+		description: 'List of emails (and optional IPs) to validate',
+		options: [
+			{
+				displayName: 'Mapped Values',
+				name: 'mappedValues',
+				values: [
+					{ ...Email, name: 'email_address' },
+					{ ...IpAddress, name: 'ip_address' },
+				],
+			},
+		],
+	},
 ];
 
-// prettier-ignore
+const BatchValidateFields: INodeProperties[] = [Timeout, ActivityData, VerifyPlus, ...ValidateItemInputFields].map(
+	addDisplayOptions({
+		resource: [Resources.Validation],
+		operation: [Operations.ValidationBatchValidate],
+	}),
+);
+
+const EmailBatchFields: INodeProperties[] = [CombineItems, ...ValidateItemInputFields];
+
 const BinaryFileFields: INodeProperties[] = [
+	// prettier-ignore
 	BinaryKey,
 	HasHeader,
 	EmailColumnNumber,
 	IpAddressColumnNumber,
 ];
 
-// prettier-ignore
 const SendFileFields: INodeProperties[] = [
 	FileName,
 	RemoveDuplicates,
 	ReturnUrl,
 	SendFileInputType,
-	...BinaryFileFields.map(addDisplayOptions({[Fields.SendFileInputType]: [SendFileInputFieldType.FILE]})),
-	...EmailBatchFields.map(addDisplayOptions({[Fields.SendFileInputType]: [SendFileInputFieldType.EMAIL_BATCH]})),
-].map(addDisplayOptions({
-	resource: [Resources.Validation],
-	operation: [Operations.BulkValidationSendFile]
-}));
+	...BinaryFileFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
+	...EmailBatchFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
+].map(
+	addDisplayOptions({
+		resource: [Resources.Validation],
+		operation: [Operations.BulkValidationSendFile],
+	}),
+);
 
-// prettier-ignore
 const GetFileFields: INodeProperties[] = [
 	{
 		...FileId,
@@ -88,26 +103,32 @@ const GetFileFields: INodeProperties[] = [
 	FileName,
 	GetFileOutputType,
 	...[Batch].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
-].map(addDisplayOptions({
-	resource: [Resources.Validation],
-	operation: [Operations.BulkValidationGetFile]
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Validation],
+		operation: [Operations.BulkValidationGetFile],
+	}),
+);
 
-// prettier-ignore
 const FileStatusFields: INodeProperties[] = [
+	// prettier-ignore
 	FileId,
-].map(addDisplayOptions({
-	resource: [Resources.Validation],
-	operation: [Operations.BulkValidationFileStatus]
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Validation],
+		operation: [Operations.BulkValidationFileStatus],
+	}),
+);
 
-// prettier-ignore
 const DeleteFileFields: INodeProperties[] = [
+	// prettier-ignore
 	FileId,
-].map(addDisplayOptions({
-	resource: [Resources.Validation],
-	operation: [Operations.BulkValidationDeleteFile]
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Validation],
+		operation: [Operations.BulkValidationDeleteFile],
+	}),
+);
 
 export const ValidationOperations: INodeProperties[] = [
 	// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
@@ -170,33 +191,14 @@ export const ValidationOperations: INodeProperties[] = [
 	...DeleteFileFields,
 ];
 
+// prettier-ignore
 export const ValidationOperationHints: NodeHint[] = [
-	documentationHint(
-		Operations.ValidationValidate,
-		'Email Validation: Single Email Validation',
-		Documentation.ValidationValidate,
-	),
-	documentationHint(
-		Operations.ValidationBatchValidate,
-		'Email Validation: Batch Email Validation',
-		Documentation.ValidationBatchValidate,
-	),
 	multipleInputItemsHint(Operations.BulkValidationSendFile),
 	combineItemsHint(Operations.BulkValidationSendFile),
-	documentationHint(
-		Operations.BulkValidationSendFile,
-		'Bulk Validation: Send File',
-		Documentation.BulkValidationSendFile,
-	),
+	documentationHint(Operations.ValidationValidate, 'Email Validation: Single Email Validation', Documentation.ValidationValidate),
+	documentationHint(Operations.ValidationBatchValidate, 'Email Validation: Batch Email Validation', Documentation.ValidationBatchValidate),
+	documentationHint(Operations.BulkValidationSendFile, 'Bulk Validation: Send File', Documentation.BulkValidationSendFile),
 	documentationHint(Operations.BulkValidationGetFile, 'Bulk Validation: Get File', Documentation.BulkValidationGetFile),
-	documentationHint(
-		Operations.BulkValidationFileStatus,
-		'Bulk Validation: File Status',
-		Documentation.BulkValidationFileStatus,
-	),
-	documentationHint(
-		Operations.BulkValidationFileStatus,
-		'Bulk Validation: Delete File',
-		Documentation.BulkValidationDeleteFile,
-	),
+	documentationHint(Operations.BulkValidationFileStatus, 'Bulk Validation: File Status',Documentation.BulkValidationFileStatus),
+	documentationHint(Operations.BulkValidationFileStatus, 'Bulk Validation: Delete File', Documentation.BulkValidationDeleteFile),
 ];

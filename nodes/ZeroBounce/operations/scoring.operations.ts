@@ -4,7 +4,6 @@ import { addDisplayOptions, combineItemsHint, documentationHint, multipleInputIt
 import { Documentation, Fields, Operations, Resources } from '../enums';
 import { ApiEndpoint } from '../fields/api-endpoint.field';
 import { CombineItems } from '../fields/combine-items.field';
-import { EmailBatchAssignment, EmailBatchJson, EmailBatchMapped, EmailBatchType } from '../fields/email-batch.field';
 import { BinaryKey } from '../fields/binary-key.field';
 import { HasHeader } from '../fields/has-header.field';
 import { EmailColumnNumber } from '../fields/email-address-column.field';
@@ -15,67 +14,65 @@ import { SendFileInputFieldType, SendFileInputType } from '../fields/send-file-i
 import { FileId } from '../fields/file-id.field';
 import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-output-type.field';
 import { Batch } from '../fields/batch.field';
+import { ItemInputAssignment, ItemInputJson, ItemInputMapped, ItemInputType } from '../fields/item-input.field';
 
-// prettier-ignore
 const ScoreFields: INodeProperties[] = [
+	// prettier-ignore
 	ApiEndpoint,
 	Email,
-].map(addDisplayOptions({
-	resource: [Resources.Scoring],
-	operation: [Operations.ScoringScore]
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Scoring],
+		operation: [Operations.ScoringScore],
+	}),
+);
 
-// prettier-ignore
-const EmailBatchFields: INodeProperties[] = [
+const ItemInputFields: INodeProperties[] = [
 	CombineItems,
-	EmailBatchType,
+	ItemInputType,
 	{
-		...EmailBatchAssignment,
-		description:
-			'Array of emails to validate in batch. Expects the format [{"email_address": "..."}, {"email_address": "..."}].',
+		...ItemInputAssignment,
+		description: 'Email(s) or email object(s) to score',
 	},
 	{
-		...EmailBatchJson,
+		...ItemInputJson,
 		default: '[\n  {"email_address": "valid@example.com"},\n  {"email_address": "invalid@example.com"}\n]',
-		description:
-			'JSON array of emails (and optional IPs) to validate in batch. Expects the format [{"email_address": "..."}, {"email_address": "..."}].',
+		description: 'JSON containing one or more email or email objects to score',
 	},
 	{
-		...EmailBatchMapped,
-		description: 'List of emails to validate in batch',
+		...ItemInputMapped,
+		description: 'List of emails to score',
 		options: [
 			{
-				displayName: 'Email Batch',
-				name: 'emailBatch',
-				values: [
-					{ ...Email, name: 'email_address' },
-				],
+				displayName: 'Mapped Values',
+				name: 'mappedValues',
+				values: [{ ...Email, name: 'email_address' }],
 			},
 		],
 	},
 ];
 
-// prettier-ignore
 const BinaryFileFields: INodeProperties[] = [
+	// prettier-ignore
 	BinaryKey,
 	HasHeader,
 	EmailColumnNumber,
 ];
 
-// prettier-ignore
 const SendFileFields: INodeProperties[] = [
 	FileName,
 	RemoveDuplicates,
 	ReturnUrl,
 	SendFileInputType,
-	...BinaryFileFields.map(addDisplayOptions({[Fields.SendFileInputType]: [SendFileInputFieldType.FILE]})),
-	...EmailBatchFields.map(addDisplayOptions({[Fields.SendFileInputType]: [SendFileInputFieldType.EMAIL_BATCH]})),
-].map(addDisplayOptions({
-	resource: [Resources.Scoring],
-	operation: [Operations.BulkScoringSendFile]
-}));
+	...BinaryFileFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
+	...ItemInputFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
+].map(
+	addDisplayOptions({
+		resource: [Resources.Scoring],
+		operation: [Operations.BulkScoringSendFile],
+	}),
+);
 
-// prettier-ignore
 const GetFileFields: INodeProperties[] = [
 	{
 		...FileId,
@@ -84,26 +81,32 @@ const GetFileFields: INodeProperties[] = [
 	FileName,
 	GetFileOutputType,
 	...[Batch].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
-].map(addDisplayOptions({
-	resource: [Resources.Scoring],
-	operation: [Operations.BulkScoringGetFile]
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Scoring],
+		operation: [Operations.BulkScoringGetFile],
+	}),
+);
 
-// prettier-ignore
 const FileStatusFields: INodeProperties[] = [
+	// prettier-ignore
 	FileId,
-].map(addDisplayOptions({
-	resource: [Resources.Scoring],
-	operation: [Operations.BulkScoringFileStatus]
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Scoring],
+		operation: [Operations.BulkScoringFileStatus],
+	}),
+);
 
-// prettier-ignore
 const DeleteFileFields: INodeProperties[] = [
+	// prettier-ignore
 	FileId,
-].map(addDisplayOptions({
-	resource: [Resources.Scoring],
-	operation: [Operations.BulkScoringDeleteFile]
-}));
+].map(
+	addDisplayOptions({
+		resource: [Resources.Scoring],
+		operation: [Operations.BulkScoringDeleteFile],
+	}),
+);
 
 export const ScoringOperations: INodeProperties[] = [
 	// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
@@ -158,20 +161,13 @@ export const ScoringOperations: INodeProperties[] = [
 	...DeleteFileFields,
 ];
 
+// prettier-ignore
 export const ScoringOperationHints: NodeHint[] = [
-	documentationHint(Operations.ScoringScore, 'A.I. Scoring: Single Email Scoring', Documentation.ScoringScore),
 	multipleInputItemsHint(Operations.BulkScoringSendFile),
 	combineItemsHint(Operations.BulkScoringSendFile),
+	documentationHint(Operations.ScoringScore, 'A.I. Scoring: Single Email Scoring', Documentation.ScoringScore),
 	documentationHint(Operations.BulkScoringSendFile, 'Bulk A.I. Scoring: Send File', Documentation.BulkScoringSendFile),
 	documentationHint(Operations.BulkScoringGetFile, 'Bulk A.I. Scoring: Get File', Documentation.BulkScoringGetFile),
-	documentationHint(
-		Operations.BulkScoringFileStatus,
-		'Bulk A.I. Scoring: File Status',
-		Documentation.BulkScoringFileStatus,
-	),
-	documentationHint(
-		Operations.BulkScoringFileStatus,
-		'Bulk A.I. Scoring: Delete File',
-		Documentation.BulkScoringDeleteFile,
-	),
+	documentationHint(Operations.BulkScoringFileStatus, 'Bulk A.I. Scoring: File Status', Documentation.BulkScoringFileStatus),
+	documentationHint(Operations.BulkScoringFileStatus, 'Bulk A.I. Scoring: Delete File', Documentation.BulkScoringDeleteFile),
 ];

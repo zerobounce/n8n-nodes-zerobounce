@@ -1,6 +1,6 @@
 import { ApplicationError, IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
 import {
-	convertEmailBatch,
+	convertItemInput,
 	getNumberParameter,
 	IEmailEntry,
 	IErrorResponse,
@@ -72,9 +72,6 @@ interface IValidateBatchResult extends IDataObject {
  *
  * @param {IExecuteFunctions} context - The n8n execution context, providing access to node parameters and credentials.
  * @param {number} i - The index of the current item being processed by n8n.
- * @param {number} [timeout] - (Optional) The duration in seconds (3–60) to allow for validation. If exceeded, the API may return 'unknown' or 'greylisted'.
- * @param {boolean} [activityData] - (Optional) If true, includes recent activity data in the validation result.
- * @param {boolean} [verifyPlus] - (Optional) If true, forces use of the Verify+ validation method, overriding account settings.
  * @returns {Promise<INodeExecutionData[]>} A promise that resolves to an array containing the API response as JSON. The response includes details such as validation status, sub-status, domain info, and more.
  *
  * @throws {ApplicationError} If the ZeroBounce API returns an error or the validation fails (e.g., invalid API key, malformed email, or other API-side issues).
@@ -108,13 +105,10 @@ interface IValidateBatchResult extends IDataObject {
  * - Throws an error if the API returns an error response or fails to validate the email.
  * - Handles all request construction and response parsing internally.
  */
-async function validate(
-	context: IExecuteFunctions,
-	i: number,
-	timeout?: number,
-	activityData?: boolean,
-	verifyPlus?: boolean,
-): Promise<INodeExecutionData[]> {
+async function validate(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
+	const timeout = getNumberParameter(context, i, Timeout.name);
+	const activityData = context.getNodeParameter(ActivityData.name, i, false, { ensureType: 'boolean' }) as boolean;
+	const verifyPlus = context.getNodeParameter(VerifyPlus.name, i, false, { ensureType: 'boolean' }) as boolean;
 	const email = context.getNodeParameter(Email.name, i) as string;
 	const ipAddress = context.getNodeParameter(IpAddress.name, i) as string;
 	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
@@ -151,10 +145,6 @@ async function validate(
  * @param context - The n8n execution context providing access to node parameters,
  *   credentials, and helper methods for making HTTP requests.
  * @param i - The index of the current item being processed.
- * @param timeout - (Optional) The duration in seconds (3–60) allowed for validation.
- *   If exceeded, ZeroBounce may return a status of `unknown` or `greylisted`.
- * @param activityData - (Optional) When true, includes recent activity data in the validation results.
- * @param verifyPlus - (Optional) When true, forces use of the Verify+ validation method, overriding account defaults.
  *
  * @returns A Promise resolving to an array containing one `INodeExecutionData` item:
  * - `json`: The parsed response from the ZeroBounce API, containing:
@@ -182,14 +172,11 @@ async function validate(
  * - Optional parameters (`timeout`, `activityData`, `verifyPlus`) allow customization of request behavior.
  * - The function wraps the ZeroBounce response in an n8n `INodeExecutionData` structure for workflow compatibility.
  */
-async function batchValidate(
-	context: IExecuteFunctions,
-	i: number,
-	timeout?: number,
-	activityData?: boolean,
-	verifyPlus?: boolean,
-): Promise<INodeExecutionData[]> {
-	const emailBatch = convertEmailBatch(context, i, Mode.VALIDATION);
+async function batchValidate(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
+	const timeout = getNumberParameter(context, i, Timeout.name);
+	const activityData = context.getNodeParameter(ActivityData.name, i, false, { ensureType: 'boolean' }) as boolean;
+	const verifyPlus = context.getNodeParameter(VerifyPlus.name, i, false, { ensureType: 'boolean' }) as boolean;
+	const emailBatch = convertItemInput(context, i, Mode.VALIDATION) as IEmailEntry[];
 
 	if (emailBatch.length > 200) {
 		throw new ApplicationError('ZeroBounce API allows a maximum of 200 email entries per request.');
@@ -219,15 +206,11 @@ async function batchValidate(
 
 export class ValidationHandler implements IOperationHandler {
 	handle(context: IExecuteFunctions, operation: string, i: number): Promise<INodeExecutionData[]> {
-		const timeout = getNumberParameter(context, i, Timeout.name);
-		const activityData = context.getNodeParameter(ActivityData.name, i, false, { ensureType: 'boolean' }) as boolean;
-		const verifyPlus = context.getNodeParameter(VerifyPlus.name, i, false, { ensureType: 'boolean' }) as boolean;
-
 		switch (operation) {
 			case Operations.ValidationValidate:
-				return validate(context, i, timeout, activityData, verifyPlus);
+				return validate(context, i);
 			case Operations.ValidationBatchValidate:
-				return batchValidate(context, i, timeout, activityData, verifyPlus);
+				return batchValidate(context, i);
 			case Operations.BulkValidationSendFile:
 				return sendFile(context, i, Mode.VALIDATION);
 			case Operations.BulkValidationGetFile:

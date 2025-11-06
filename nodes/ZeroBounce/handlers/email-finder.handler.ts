@@ -1,14 +1,15 @@
 import { ApplicationError, IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
 import { IErrorResponse, IOperationHandler } from '../utils/handler.utils';
 import { IRequestParams, zbGetRequest } from '../utils/request.utils';
-import { BaseUrl, Endpoint, Operations } from '../enums';
+import { BaseUrl, Endpoint, Mode, Operations } from '../enums';
 import { ApiEndpoint } from '../fields/api-endpoint.field';
 import { CompanyName } from '../fields/company-name.field';
 import { Domain } from '../fields/domain.field';
 import { FirstName } from '../fields/first-name.field';
 import { MiddleName } from '../fields/middle-name.field';
 import { LastName } from '../fields/last-name.field';
-import { FindBy, FindByType } from '../fields/finder-type.field';
+import { deleteFile, fileStatus, getFile, sendFile } from '../utils/bulk.utils';
+import { FindBy, FindByType } from '../fields/email-finder.field';
 
 interface IFindRequest extends IRequestParams {
 	domain?: string; // The email domain for which to find the email format. [conditional]
@@ -53,15 +54,15 @@ async function find(context: IExecuteFunctions, i: number): Promise<INodeExecuti
 	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
 	const findBy = context.getNodeParameter(FindBy.name, i) as FindByType;
 
-	let companyName: string | undefined;
 	let domain: string | undefined;
+	let companyName: string | undefined;
 
 	switch (findBy) {
-		case FindByType.COMPANY_NAME:
-			companyName = context.getNodeParameter(CompanyName.name, i) as string;
-			break;
 		case FindByType.DOMAIN:
 			domain = context.getNodeParameter(Domain.name, i) as string;
+			break;
+		case FindByType.COMPANY_NAME:
+			companyName = context.getNodeParameter(CompanyName.name, i) as string;
 			break;
 	}
 
@@ -70,8 +71,8 @@ async function find(context: IExecuteFunctions, i: number): Promise<INodeExecuti
 	const lastName = context.getNodeParameter(LastName.name, i) as string | undefined;
 
 	const request: IFindRequest = {
-		company_name: companyName,
 		domain: domain,
+		company_name: companyName,
 		first_name: firstName,
 		middle_name: middleName,
 		last_name: lastName,
@@ -97,9 +98,13 @@ export class EmailFinderHandler implements IOperationHandler {
 			case Operations.EmailFinderFind:
 				return find(context, i);
 			case Operations.BulkEmailFinderSendFile:
+				return sendFile(context, i, Mode.EMAIL_FINDER);
 			case Operations.BulkEmailFinderGetFile:
+				return getFile(context, i, Mode.EMAIL_FINDER);
 			case Operations.BulkEmailFinderFileStatus:
+				return fileStatus(context, i, Mode.EMAIL_FINDER);
 			case Operations.BulkEmailFinderDeleteFile:
+				return deleteFile(context, i, Mode.EMAIL_FINDER);
 			default:
 				throw new ApplicationError(`Operation ${operation} not supported`);
 		}
