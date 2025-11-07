@@ -13,13 +13,11 @@ import { BinaryKey } from '../fields/binary-key.field';
 import { HasHeader } from '../fields/has-header.field';
 import { CombineItems } from '../fields/combine-items.field';
 import { FileId } from '../fields/file-id.field';
-import { ActivityData } from '../fields/activity-data.field';
 import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-output-type.field';
 import { Batch } from '../fields/batch.field';
 import { DomainColumnNumber } from '../fields/domain-column.field';
 import { ItemInputAssignment, ItemInputJson, ItemInputMapped, ItemInputType } from '../fields/item-input.field';
 import { FullName } from '../fields/full-name.field';
-import { NameType, NameTypeOptions } from '../fields/name-type.field';
 import {
 	FindBy,
 	FindByType,
@@ -27,6 +25,8 @@ import {
 	FullNameColumnNumber,
 	LastNameColumnNumber,
 	MiddleNameColumnNumber,
+	NameType,
+	NameTypeOptions,
 } from '../fields/email-finder.field';
 
 const FindFields: INodeProperties[] = [
@@ -143,7 +143,10 @@ const ItemInputFields: INodeProperties[] = [
 ];
 
 const SendFileFields: INodeProperties[] = [
-	FileName,
+	{
+		...FileName,
+		placeholder: 'n8n_email_finder.csv',
+	},
 	SendFileInputType,
 	...BinaryFileFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
 	...ItemInputFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
@@ -159,8 +162,10 @@ const GetFileFields: INodeProperties[] = [
 		...FileId,
 		default: '={{ $json.body.file_id }}',
 	},
-	ActivityData,
-	FileName,
+	{
+		...FileName,
+		placeholder: 'n8n_email_finder_results.csv',
+	},
 	GetFileOutputType,
 	...[Batch].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
 ].map(
@@ -253,5 +258,5 @@ export const EmailFinderOperationHints: NodeHint[] = [
 	documentationHint(Operations.BulkEmailFinderSendFile, 'Bulk Email Finder: Send File', Documentation.BulkEmailFinderSendFile),
 	documentationHint(Operations.BulkEmailFinderGetFile, 'Bulk Email Finder: Get File', Documentation.BulkEmailFinderGetFile),
 	documentationHint(Operations.BulkEmailFinderFileStatus, 'Bulk Email Finder: File Status',Documentation.BulkEmailFinderFileStatus),
-	documentationHint(Operations.BulkEmailFinderFileStatus, 'Bulk Email Finder: Delete File', Documentation.BulkEmailFinderDeleteFile),
+	documentationHint(Operations.BulkEmailFinderDeleteFile, 'Bulk Email Finder: Delete File', Documentation.BulkEmailFinderDeleteFile),
 ];

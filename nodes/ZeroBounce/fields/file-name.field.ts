@@ -7,6 +7,6 @@ export const FileName: INodeProperties = {
 	name: Fields.FileName,
 	type: 'string',
 	default: '',
-	placeholder: 'n8n_email_batch.csv',
+	placeholder: 'n8n.csv',
 	description: '(Optional) The name to use for the file',
 };

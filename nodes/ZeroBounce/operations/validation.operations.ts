@@ -81,7 +81,10 @@ const BinaryFileFields: INodeProperties[] = [
 ];
 
 const SendFileFields: INodeProperties[] = [
-	FileName,
+	{
+		...FileName,
+		placeholder: 'n8n_validation.csv',
+	},
 	RemoveDuplicates,
 	ReturnUrl,
 	SendFileInputType,
@@ -100,7 +103,10 @@ const GetFileFields: INodeProperties[] = [
 		default: '={{ $json.body.file_id }}',
 	},
 	ActivityData,
-	FileName,
+	{
+		...FileName,
+		placeholder: 'n8n_validation_results.csv',
+	},
 	GetFileOutputType,
 	...[Batch].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
 ].map(

@@ -126,8 +126,8 @@ export async function zbGetRequest(
 ): Promise<IN8nHttpFullResponse> {
 	const requestOptions: IHttpRequestOptions = {
 		method: 'GET',
-		baseURL: baseUrl as string,
-		url: endpoint as string,
+		baseURL: baseUrl,
+		url: endpoint,
 		json: true,
 		returnFullResponse: true,
 		qs: queryParams,
@@ -138,13 +138,14 @@ export async function zbGetRequest(
 
 export async function zbGetFileRequest(
 	context: IExecuteFunctions,
+	baseUrl: BaseUrl,
 	endpoint: Endpoint | BulkEndpoint,
 	queryParams?: IRequestParams,
 ): Promise<IN8nHttpFullResponse> {
 	const requestOptions: IHttpRequestOptions = {
 		method: 'GET',
-		baseURL: BaseUrl.BULK,
-		url: endpoint as string,
+		baseURL: baseUrl,
+		url: endpoint,
 		json: true,
 		encoding: 'arraybuffer',
 		returnFullResponse: true,
@@ -163,8 +164,8 @@ export async function zbPostRequest(
 ): Promise<IN8nHttpFullResponse> {
 	const requestOptions: IHttpRequestOptions = {
 		method: 'POST',
-		baseURL: baseUrl as string,
-		url: endpoint as string,
+		baseURL: baseUrl,
+		url: endpoint,
 		json: true,
 		returnFullResponse: true,
 		body: body,

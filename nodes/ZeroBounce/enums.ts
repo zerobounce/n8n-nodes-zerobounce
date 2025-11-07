@@ -94,7 +94,8 @@ export enum BaseUrl {
 	DEFAULT = 'https://api.zerobounce.net/v2',
 	US = 'https://api-us.zerobounce.net/v2',
 	EU = 'https://api-eu.zerobounce.net/v2',
-	BULK = 'https://bulkapi.zerobounce.net/v2',
+	BULK_V2 = 'https://bulkapi.zerobounce.net/v2',
+	BULK = 'https://bulkapi.zerobounce.net',
 }
 
 export enum Endpoint {
@@ -125,9 +126,9 @@ export enum BulkEndpoint {
 }
 
 export enum Mode {
-	VALIDATION,
-	SCORING,
-	EMAIL_FINDER,
+	VALIDATION = 'validation',
+	SCORING = 'scoring',
+	EMAIL_FINDER = 'email_finder',
 }
 
 export enum Documentation {

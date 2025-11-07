@@ -189,7 +189,7 @@ async function batchValidate(context: IExecuteFunctions, i: number): Promise<INo
 		verify_plus: verifyPlus,
 	};
 
-	const fullResponse = await zbPostRequest(context, BaseUrl.BULK, BulkEndpoint.ValidateBatch, request);
+	const fullResponse = await zbPostRequest(context, BaseUrl.BULK_V2, BulkEndpoint.ValidateBatch, request);
 	const response = fullResponse.body as IValidateBatchResult;
 	const errors = response.errors;
 

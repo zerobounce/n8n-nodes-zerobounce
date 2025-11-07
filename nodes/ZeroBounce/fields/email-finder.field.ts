@@ -1,6 +1,5 @@
 import type { INodeProperties } from 'n8n-workflow';
 import { Fields } from '../enums';
-import { NameType, NameTypeOptions } from './name-type.field';
 
 export enum FindByType {
 	DOMAIN = 'domain',
@@ -20,6 +19,26 @@ export const FindBy: INodeProperties = {
 		{ name: 'Company Name', value: FindByType.COMPANY_NAME },
 	],
 	default: FindByType.DOMAIN,
+};
+
+export enum NameTypeOptions {
+	PARTIAL = 'partial',
+	FULL = 'full',
+}
+
+// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
+export const NameType: INodeProperties = {
+	displayName: 'Name Type',
+	name: Fields.NameType,
+	type: 'options',
+	allowArbitraryValues: false,
+	noDataExpression: true,
+	description: 'Type of name to use to find the email format',
+	options: [
+		{ name: 'Partial', value: NameTypeOptions.PARTIAL },
+		{ name: 'Full', value: NameTypeOptions.FULL },
+	],
+	default: NameTypeOptions.PARTIAL,
 };
 
 export const FirstNameColumnNumber: INodeProperties = {

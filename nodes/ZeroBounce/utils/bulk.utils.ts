@@ -9,7 +9,7 @@ import {
 	getFileId,
 	getFileNameFromHeader,
 	getNumberParameter,
-	isBinary,
+	isBinary, isNotBlank,
 } from './handler.utils';
 import { BaseUrl, BulkEndpoint, Mode } from '../enums';
 import { SendFileInputFieldType, SendFileInputType } from '../fields/send-file-input-type.field';
@@ -114,6 +114,16 @@ export interface IDeleteFileResponse extends IDataObject {
 	file_id: string;
 }
 
+function baseUrl(mode: Mode): BaseUrl {
+	switch (mode) {
+		case Mode.VALIDATION:
+		case Mode.SCORING:
+			return BaseUrl.BULK_V2;
+		case Mode.EMAIL_FINDER:
+			return BaseUrl.BULK;
+	}
+}
+
 async function sendFileDetails(
 	context: IExecuteFunctions,
 	i: number,
@@ -143,7 +153,7 @@ async function sendFileDetails(
 				first_name_column: 2,
 				last_name_column: 3,
 				middle_name_column: 4,
-				// full_name_column: 5,
+				full_name_column: 5,
 			} as ISendFileEmailFinderRequest;
 			details.endpoint = BulkEndpoint.EmailFinderSendFile;
 			break;
@@ -155,6 +165,10 @@ async function sendFileDetails(
 		details.binaryData = getBinaryData(context, i, binaryKey);
 		details.buffer = await context.helpers.getBinaryDataBuffer(i, binaryKey);
 		details.request.has_header_row = context.getNodeParameter(HasHeader.name, i) as boolean;
+
+		if (isNotBlank(fileName)) {
+			details.binaryData.fileName = fileName;
+		}
 
 		if (mode === Mode.VALIDATION || mode === Mode.SCORING) {
 			const request = details.request as ISendFileValidationRequest | ISendFileScoringRequest;
@@ -186,7 +200,7 @@ async function sendFileDetails(
 
 			details.binaryData = await context.helpers.prepareBinaryData(
 				Buffer.from(csvOutput.contents, 'utf8'),
-				defaultString(fileName, 'n8n_email_batch.csv'),
+				defaultString(fileName, `n8n_${mode}.csv`),
 				'text/csv',
 			);
 			details.buffer = csvOutput.contents;
@@ -270,7 +284,7 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 		formData.append(key, value);
 	}
 
-	const fullResponse = await zbPostRequest(context, BaseUrl.BULK, details.endpoint, formData);
+	const fullResponse = await zbPostRequest(context, baseUrl(mode), details.endpoint, formData);
 	const response = fullResponse.body as ISendFileResponse | IBulkErrorResponse;
 
 	if (isBulkErrorResponse(response)) {
@@ -398,7 +412,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 			break;
 	}
 
-	const fullResponse = await zbGetFileRequest(context, endpoint, request);
+	const fullResponse = await zbGetFileRequest(context, baseUrl(mode), endpoint, request);
 	const headers = fullResponse.headers;
 	const response = fullResponse.body;
 
@@ -544,7 +558,7 @@ export async function fileStatus(context: IExecuteFunctions, i: number, mode: Mo
 			break;
 	}
 
-	const fullResponse = await zbGetRequest(context, BaseUrl.BULK, endpoint, request);
+	const fullResponse = await zbGetRequest(context, baseUrl(mode), endpoint, request);
 	const response = fullResponse.body as IFileStatusResponse | IBulkErrorResponse;
 
 	if (isBulkErrorResponse(response)) {
@@ -635,7 +649,7 @@ export async function deleteFile(context: IExecuteFunctions, i: number, mode: Mo
 			break;
 	}
 
-	const fullResponse = await zbGetRequest(context, BaseUrl.BULK, endpoint, request);
+	const fullResponse = await zbGetRequest(context, baseUrl(mode), endpoint, request);
 	const response = fullResponse.body as IDeleteFileResponse | IBulkErrorResponse;
 
 	return [
