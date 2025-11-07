@@ -19,7 +19,10 @@ import { ItemInputAssignment, ItemInputJson, ItemInputMapped, ItemInputType } fr
 const ScoreFields: INodeProperties[] = [
 	// prettier-ignore
 	ApiEndpoint,
-	Email,
+	{
+		...Email,
+		description: 'The email address you want to score',
+	},
 ].map(
 	addDisplayOptions({
 		resource: [Resources.Scoring],
@@ -46,7 +49,13 @@ const ItemInputFields: INodeProperties[] = [
 			{
 				displayName: 'Mapped Values',
 				name: 'mappedValues',
-				values: [{ ...Email, name: 'email_address' }],
+				values: [
+					{
+						...Email,
+						name: 'email_address',
+						description: 'The email address you want to score',
+					},
+				],
 			},
 		],
 	},

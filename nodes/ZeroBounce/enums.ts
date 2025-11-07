@@ -43,11 +43,14 @@ export enum Operations {
 	BulkEmailFinderDeleteFile = 'emailFinderDeleteFile',
 
 	// Domain Search
-	DomainSearch = 'domainSearch',
+	DomainSearch = 'search',
 	BulkDomainSearchSendFile = 'domainSearchSendFile',
 	BulkDomainSearchGetFile = 'domainSearchGetFile',
 	BulkDomainSearchFileStatus = 'domainSearchFileStatus',
 	BulkDomainSearchDeleteFile = 'domainSearchDeleteFile',
+
+	// Activity Data
+	ActivityData = 'getActivityData',
 }
 
 export enum Fields {
@@ -114,6 +117,7 @@ export enum Endpoint {
 	Validate = '/validate',
 	Scoring = '/scoring',
 	GuessFormat = '/guessformat',
+	ActivityData = '/activity',
 }
 
 export enum BulkEndpoint {
@@ -168,4 +172,5 @@ export enum Documentation {
 	BulkDomainSearchGetFile = 'https://www.zerobounce.net/docs/domain-search-api/#bulk__domain_search__get_file',
 	BulkDomainSearchFileStatus = 'https://www.zerobounce.net/docs/domain-search-api/#bulk__domain_search__file_status',
 	BulkDomainSearchDeleteFile = 'https://www.zerobounce.net/docs/domain-search-api/#bulk__domain_search__delete_file',
+	ActivityData = 'https://www.zerobounce.net/docs/activity-data-api/',
 }

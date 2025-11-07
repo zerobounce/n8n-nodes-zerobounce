@@ -28,6 +28,7 @@ import {
 } from '../fields/item-input.field';
 import { DomainSearchHandler } from '../handlers/domain-search.handler';
 import { NameType, NameTypeOptions } from '../fields/email-finder.field';
+import { ActivityDataHandler } from '../handlers/activity-data.handler';
 
 export interface IOperationHandler {
 	handle(context: IExecuteFunctions, operation: string, i: number): Promise<INodeExecutionData[]>;
@@ -82,6 +83,8 @@ export function createHandler(resource: string): IOperationHandler {
 			return new EmailFinderHandler();
 		case Resources.DomainSearch:
 			return new DomainSearchHandler();
+		case Resources.ActivityData:
+			return new ActivityDataHandler();
 		default:
 			throw new ApplicationError(`Unsupported resource '${resource}'`);
 	}

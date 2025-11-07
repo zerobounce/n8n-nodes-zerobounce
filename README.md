@@ -38,6 +38,18 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
   -	Bulk A.I. Scoring Delete File
 - Email Finder
   - Find Email Address
+  - Bulk Email Finder Send File
+  - Bulk Email Finder Get File
+  - Bulk Email Finder File Status
+  - Bulk Email Finder Delete File
+- Domain Search
+  - Domain Search
+  - Bulk Domain Search Send File
+  - Bulk Domain Search Get File
+  - Bulk Domain Search File Status
+  - Bulk Domain Search Delete File
+- Activity Data
+  - Get Activity Data
 
 ## Credentials
 
