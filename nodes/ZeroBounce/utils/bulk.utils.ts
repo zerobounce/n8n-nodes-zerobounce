@@ -9,7 +9,8 @@ import {
 	getFileId,
 	getFileNameFromHeader,
 	getNumberParameter,
-	isBinary, isNotBlank,
+	isBinary,
+	isNotBlank,
 } from './handler.utils';
 import { BaseUrl, BulkEndpoint, Mode } from '../enums';
 import { SendFileInputFieldType, SendFileInputType } from '../fields/send-file-input-type.field';
@@ -21,7 +22,6 @@ import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-ou
 import { Batch } from '../fields/batch.field';
 import { CombineItems } from '../fields/combine-items.field';
 import { EmailColumnNumber } from '../fields/email-address-column.field';
-import { IpAddressColumnNumber } from '../fields/ip-address-column.field';
 import { RemoveDuplicates } from '../fields/remove-duplicates.field';
 import { DomainColumnNumber } from '../fields/domain-column.field';
 import {
@@ -29,7 +29,10 @@ import {
 	FullNameColumnNumber,
 	LastNameColumnNumber,
 	MiddleNameColumnNumber,
+	NameType,
+	NameTypeOptions,
 } from '../fields/email-finder.field';
+import { IpAddressColumnNumber } from '../fields/ip-address-column.field';
 
 export interface IBulkErrorResponse extends IDataObject {
 	success: boolean;
@@ -45,20 +48,14 @@ interface ISendFileBaseRequest {
 	has_header_row: boolean;
 }
 
-interface ISendFileValidationRequest extends ISendFileBaseRequest {
+interface ISendFileValidationOrScoringRequest extends ISendFileBaseRequest {
 	remove_duplicate: boolean;
 	return_url: string;
 	email_address_column: number;
 	ip_address_column?: number;
 }
 
-interface ISendFileScoringRequest extends ISendFileBaseRequest {
-	remove_duplicate: boolean;
-	return_url: string;
-	email_address_column: number;
-}
-
-interface ISendFileEmailFinderRequest extends ISendFileBaseRequest {
+interface ISendFileEmailFinderOrDomainSearchRequest extends ISendFileBaseRequest {
 	domain_column: number; // The column index of the domain in the file. Index starts from 1. (Required)
 	first_name_column?: number; // The column index of the first name column. (Either one of the first name column or the full name column is mandatory)
 	last_name_column?: number; // The column index of the last name column. (Optional)
@@ -67,7 +64,7 @@ interface ISendFileEmailFinderRequest extends ISendFileBaseRequest {
 }
 
 interface ISendFileDetails {
-	request: ISendFileValidationRequest | ISendFileScoringRequest | ISendFileEmailFinderRequest;
+	request: ISendFileValidationOrScoringRequest | ISendFileEmailFinderOrDomainSearchRequest;
 	endpoint: BulkEndpoint;
 	binaryData: IBinaryData;
 	buffer: string | Buffer;
@@ -120,7 +117,77 @@ function baseUrl(mode: Mode): BaseUrl {
 		case Mode.SCORING:
 			return BaseUrl.BULK_V2;
 		case Mode.EMAIL_FINDER:
+		case Mode.DOMAIN_SEARCH:
 			return BaseUrl.BULK;
+	}
+}
+
+function sendFileEndpoint(mode: Mode): BulkEndpoint {
+	switch (mode) {
+		case Mode.VALIDATION:
+			return BulkEndpoint.SendFile;
+		case Mode.SCORING:
+			return BulkEndpoint.ScoringSendFile;
+		case Mode.EMAIL_FINDER:
+			return BulkEndpoint.EmailFinderSendFile;
+		case Mode.DOMAIN_SEARCH:
+			return BulkEndpoint.DomainSearchSendFile;
+	}
+}
+
+function sendFileFileInputRequest(context: IExecuteFunctions, i: number, mode: Mode) {
+	switch (mode) {
+		case Mode.VALIDATION:
+		case Mode.SCORING:
+			return {
+				email_address_column: getNumberParameter(context, i, EmailColumnNumber.name, 1) as number,
+				remove_duplicate: context.getNodeParameter(RemoveDuplicates.name, i) as boolean,
+				ip_address_column:
+					mode === Mode.VALIDATION ? getNumberParameter(context, i, IpAddressColumnNumber.name, 2) : undefined,
+			} as ISendFileValidationOrScoringRequest;
+
+		case Mode.EMAIL_FINDER:
+		case Mode.DOMAIN_SEARCH:
+			return {
+				domain_column: getNumberParameter(context, i, DomainColumnNumber.name, 1) as number,
+				first_name_column:
+					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, FirstNameColumnNumber.name) : undefined,
+				last_name_column:
+					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, LastNameColumnNumber.name) : undefined,
+				middle_name_column:
+					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, MiddleNameColumnNumber.name) : undefined,
+				full_name_column:
+					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, FullNameColumnNumber.name) : undefined,
+			} as ISendFileEmailFinderOrDomainSearchRequest;
+	}
+}
+
+function sendFileItemsInputRequest(context: IExecuteFunctions, i: number, mode: Mode) {
+	switch (mode) {
+		case Mode.VALIDATION:
+		case Mode.SCORING:
+			return {
+				email_address_column: 1,
+				ip_address_column: mode === Mode.VALIDATION ? 2 : undefined,
+			} as ISendFileValidationOrScoringRequest;
+
+		case Mode.EMAIL_FINDER: {
+			const nameType = context.getNodeParameter(NameType.name, i, NameTypeOptions.FULL) as string;
+			const request = { domain_column: 1 } as ISendFileEmailFinderOrDomainSearchRequest;
+
+			if (nameType === NameTypeOptions.FULL) {
+				request.full_name_column = 2;
+			} else {
+				request.first_name_column = 2;
+				request.last_name_column = 3;
+				request.middle_name_column = 4;
+			}
+
+			return request;
+		}
+
+		case Mode.DOMAIN_SEARCH:
+			return { domain_column: 1 } as ISendFileEmailFinderOrDomainSearchRequest;
 	}
 }
 
@@ -133,34 +200,11 @@ async function sendFileDetails(
 ): Promise<ISendFileDetails> {
 	const details = {} as ISendFileDetails;
 
-	switch (mode) {
-		case Mode.VALIDATION:
-			details.request = {
-				email_address_column: 1,
-				ip_address_column: 2,
-			} as ISendFileValidationRequest;
-			details.endpoint = BulkEndpoint.SendFile;
-			break;
-		case Mode.SCORING:
-			details.request = {
-				email_address_column: 1,
-			} as ISendFileScoringRequest;
-			details.endpoint = BulkEndpoint.ScoringSendFile;
-			break;
-		case Mode.EMAIL_FINDER: {
-			details.request = {
-				domain_column: 1,
-				first_name_column: 2,
-				last_name_column: 3,
-				middle_name_column: 4,
-				full_name_column: 5,
-			} as ISendFileEmailFinderRequest;
-			details.endpoint = BulkEndpoint.EmailFinderSendFile;
-			break;
-		}
-	}
+	details.endpoint = sendFileEndpoint(mode);
 
 	if (inputType === SendFileInputFieldType.FILE) {
+		details.request = sendFileFileInputRequest(context, i, mode);
+
 		const binaryKey = context.getNodeParameter(BinaryKey.name, i) as string;
 		details.binaryData = getBinaryData(context, i, binaryKey);
 		details.buffer = await context.helpers.getBinaryDataBuffer(i, binaryKey);
@@ -169,29 +213,9 @@ async function sendFileDetails(
 		if (isNotBlank(fileName)) {
 			details.binaryData.fileName = fileName;
 		}
-
-		if (mode === Mode.VALIDATION || mode === Mode.SCORING) {
-			const request = details.request as ISendFileValidationRequest | ISendFileScoringRequest;
-			request.email_address_column = getNumberParameter(context, i, EmailColumnNumber.name, 1) as number;
-			request.remove_duplicate = context.getNodeParameter(RemoveDuplicates.name, i) as boolean;
-
-			if (mode === Mode.VALIDATION) {
-				(request as ISendFileValidationRequest).ip_address_column = getNumberParameter(
-					context,
-					i,
-					IpAddressColumnNumber.name,
-					2,
-				);
-			}
-		} else if (mode === Mode.EMAIL_FINDER) {
-			const request = details.request as ISendFileEmailFinderRequest;
-			request.domain_column = getNumberParameter(context, i, DomainColumnNumber.name, 1) as number;
-			request.first_name_column = getNumberParameter(context, i, FirstNameColumnNumber.name);
-			request.last_name_column = getNumberParameter(context, i, LastNameColumnNumber.name);
-			request.middle_name_column = getNumberParameter(context, i, MiddleNameColumnNumber.name);
-			request.full_name_column = getNumberParameter(context, i, FullNameColumnNumber.name);
-		}
 	} else {
+		details.request = sendFileItemsInputRequest(context, i, mode);
+
 		details.combineItems = context.getNodeParameter(CombineItems.name, i, true, { ensureType: 'boolean' }) as boolean;
 
 		// Only process the first execution if combine items is enabled
@@ -384,31 +408,24 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
  */
 export async function getFile(context: IExecuteFunctions, i: number, mode: Mode): Promise<INodeExecutionData[]> {
 	const fileId = getFileId(context, i);
-	let request: IGetFileRequest;
+	const request: IGetFileRequest = {
+		file_id: fileId,
+	};
 	let endpoint: BulkEndpoint;
 
 	switch (mode) {
-		case Mode.VALIDATION: {
+		case Mode.VALIDATION:
 			endpoint = BulkEndpoint.GetFile;
-
-			request = {
-				file_id: fileId,
-				activityData: context.getNodeParameter(ActivityData.name, i) as boolean,
-			};
+			request.activityData = context.getNodeParameter(ActivityData.name, i) as boolean;
 			break;
-		}
-		case Mode.SCORING: {
+		case Mode.SCORING:
 			endpoint = BulkEndpoint.ScoringGetFile;
-			request = {
-				file_id: fileId,
-			};
 			break;
-		}
 		case Mode.EMAIL_FINDER:
 			endpoint = BulkEndpoint.EmailFinderGetFile;
-			request = {
-				file_id: fileId,
-			};
+			break;
+		case Mode.DOMAIN_SEARCH:
+			endpoint = BulkEndpoint.DomainSearchGetFile;
 			break;
 	}
 
@@ -545,16 +562,17 @@ export async function fileStatus(context: IExecuteFunctions, i: number, mode: Mo
 	let endpoint: BulkEndpoint;
 
 	switch (mode) {
-		case Mode.VALIDATION: {
+		case Mode.VALIDATION:
 			endpoint = BulkEndpoint.FileStatus;
 			break;
-		}
-		case Mode.SCORING: {
+		case Mode.SCORING:
 			endpoint = BulkEndpoint.ScoringFileStatus;
 			break;
-		}
 		case Mode.EMAIL_FINDER:
 			endpoint = BulkEndpoint.EmailFinderFileStatus;
+			break;
+		case Mode.DOMAIN_SEARCH:
+			endpoint = BulkEndpoint.DomainSearchFileStatus;
 			break;
 	}
 
@@ -636,16 +654,17 @@ export async function deleteFile(context: IExecuteFunctions, i: number, mode: Mo
 	let endpoint: BulkEndpoint;
 
 	switch (mode) {
-		case Mode.VALIDATION: {
+		case Mode.VALIDATION:
 			endpoint = BulkEndpoint.DeleteFile;
 			break;
-		}
-		case Mode.SCORING: {
+		case Mode.SCORING:
 			endpoint = BulkEndpoint.ScoringDeleteFile;
 			break;
-		}
 		case Mode.EMAIL_FINDER:
 			endpoint = BulkEndpoint.EmailFinderDeleteFile;
+			break;
+		case Mode.DOMAIN_SEARCH:
+			endpoint = BulkEndpoint.DomainSearchDeleteFile;
 			break;
 	}
 

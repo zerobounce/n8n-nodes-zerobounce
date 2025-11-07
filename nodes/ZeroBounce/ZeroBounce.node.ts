@@ -5,6 +5,7 @@ import { getHandler, IOperationHandler } from './utils/handler.utils';
 import { Credentials, Resources } from './enums';
 import { ScoringOperationHints, ScoringOperations } from './operations/scoring.operations';
 import { EmailFinderOperationHints, EmailFinderOperations } from './operations/email-finder.operations';
+import { DomainSearchOperationHints, DomainSearchOperations } from './operations/domain-search.operations';
 
 export class ZeroBounce implements INodeType {
 	readonly description: INodeTypeDescription = {
@@ -72,6 +73,12 @@ export class ZeroBounce implements INodeType {
 						description:
 							'Email Finder allows you to search for new business email addresses using our proprietary technologies',
 					},
+					{
+						name: 'Domain Search',
+						value: Resources.DomainSearch,
+						description:
+							'Domain Search allows you to search for new business email formats using our proprietary technologies',
+					},
 				],
 				default: Resources.Validation,
 			},
@@ -79,12 +86,14 @@ export class ZeroBounce implements INodeType {
 			...ValidationOperations,
 			...ScoringOperations,
 			...EmailFinderOperations,
+			...DomainSearchOperations,
 		],
 		hints: [
 			...AccountOperationHints,
 			...ValidationOperationHints,
 			...ScoringOperationHints,
 			...EmailFinderOperationHints,
+			...DomainSearchOperationHints,
 		],
 	};
 

@@ -26,6 +26,8 @@ import {
 	ItemInputOptions,
 	ItemInputType,
 } from '../fields/item-input.field';
+import { DomainSearchHandler } from '../handlers/domain-search.handler';
+import { NameType, NameTypeOptions } from '../fields/email-finder.field';
 
 export interface IOperationHandler {
 	handle(context: IExecuteFunctions, operation: string, i: number): Promise<INodeExecutionData[]>;
@@ -46,6 +48,10 @@ export interface IEmailFinderEntry extends IItemInputEntry {
 	last_name?: string;
 	middle_name?: string;
 	full_name?: string;
+}
+
+export interface IDomainSearchEntry extends IItemInputEntry {
+	domain: string;
 }
 
 export interface IErrorResponse extends IDataObject {
@@ -74,6 +80,8 @@ export function createHandler(resource: string): IOperationHandler {
 			return new ScoringHandler();
 		case Resources.EmailFinder:
 			return new EmailFinderHandler();
+		case Resources.DomainSearch:
+			return new DomainSearchHandler();
 		default:
 			throw new ApplicationError(`Unsupported resource '${resource}'`);
 	}
@@ -159,13 +167,35 @@ export function isEmailFinderEntry(obj: unknown): obj is IEmailFinderEntry {
 	);
 }
 
-function isNative(value: unknown, mode: Mode): value is IEmailEntry | IEmailFinderEntry {
+/**
+ * Type guard to determine whether a given value is a valid {@link IDomainSearchEntry}.
+ *
+ * A valid domain entry must:
+ * - Be a non-null object.
+ * - Contain a non-empty string property `domain`.
+ *
+ * @param obj - The value to test.
+ * @returns `true` if the object satisfies the {@link IDomainSearchEntry} structure; otherwise `false`.
+ */
+export function isDomainSearchEntry(obj: unknown): obj is IDomainSearchEntry {
+	return (
+		obj !== null &&
+		typeof obj === 'object' &&
+		'domain' in obj &&
+		typeof obj.domain === 'string' &&
+		isNotBlank(obj.domain)
+	);
+}
+
+function isNative(value: unknown, mode: Mode): value is IEmailEntry | IEmailFinderEntry | IDomainSearchEntry {
 	switch (mode) {
 		case Mode.VALIDATION:
 		case Mode.SCORING:
 			return isEmailEntry(value);
 		case Mode.EMAIL_FINDER:
 			return isEmailFinderEntry(value);
+		case Mode.DOMAIN_SEARCH:
+			return isDomainSearchEntry(value);
 	}
 }
 
@@ -176,6 +206,8 @@ function nameOfRequiredValue(mode: Mode): string {
 			return 'email address';
 		case Mode.EMAIL_FINDER:
 			return 'domain and either a first name or full name';
+		case Mode.DOMAIN_SEARCH:
+			return 'domain';
 	}
 }
 
@@ -187,6 +219,8 @@ function expectedFormat(mode: Mode): string {
 			return '{"email_address": "..."}';
 		case Mode.EMAIL_FINDER:
 			return '{"domain": "...", "first_name": "..."}';
+		case Mode.DOMAIN_SEARCH:
+			return '{"domain": "..."}';
 	}
 }
 
@@ -198,6 +232,8 @@ function expectedFields(mode: Mode): string {
 			return "'email' e.g. 'email-address', 'EMAIL', 'personalEmail' etc.";
 		case Mode.EMAIL_FINDER:
 			return "either 'domain' or 'name' e.g. 'domain', 'DOMAIN', 'emailDomain', 'first_name', 'full_name' etc.";
+		case Mode.DOMAIN_SEARCH:
+			return "'domain' e.g. 'domain', 'DOMAIN', 'emailDomain' etc.";
 	}
 }
 
@@ -208,8 +244,10 @@ function uniqueValue(value: IItemInputEntry, mode: Mode): string {
 			return (value as IEmailEntry).email_address;
 		case Mode.EMAIL_FINDER: {
 			const entry = value as IEmailFinderEntry;
-			return entry.domain + ',' + defaultString(entry.first_name)  + ',' + defaultString(entry.full_name);
+			return entry.domain + ',' + defaultString(entry.first_name) + ',' + defaultString(entry.full_name);
 		}
+		case Mode.DOMAIN_SEARCH:
+			return (value as IDomainSearchEntry).domain;
 	}
 }
 
@@ -328,43 +366,87 @@ export function convertValueToEntries(
 	);
 }
 
+function convertValidationStringValue(value: string, name: string, idx: number, entries: IItemInputEntry[]): void {
+	// Expect either an email or ip address for string values
+	if (name.includes('email')) {
+		entries.push({ email_address: value });
+		return;
+	}
+
+	if (name.includes('ip')) {
+		if (entries.length === 0) {
+			throw new ApplicationError(
+				`Invalid assignment value '${name}' at position ${idx + 1}: Expected email field before ip field.`,
+			);
+		}
+		// Add the ip_address to the previous IEmailEntry
+		entries[entries.length - 1].ip_address = value;
+	}
+}
+
+function convertScoringStringValue(value: string, name: string, idx: number, entries: IItemInputEntry[]): void {
+	// Expect an email address for string values
+	if (name.includes('email')) {
+		entries.push({ email_address: value });
+	}
+}
+
+function convertEmailFinderStringValue(value: string, name: string, idx: number, entries: IItemInputEntry[]): void {
+	// Expect a domain for string values
+	if (name.includes('domain')) {
+		entries.push({ domain: value });
+		return;
+	}
+
+	if (!name.includes('name')) {
+		return;
+	}
+
+	if (entries.length === 0) {
+		throw new ApplicationError(
+			`Invalid assignment value '${name}' at position ${idx + 1}: Expected domain field before name field.`,
+		);
+	}
+
+	if (name.includes('first')) {
+		// Add first_name to the previous IEmailFinderEntry
+		entries[entries.length - 1].first_name = value;
+	} else if (name.includes('last')) {
+		// Add last_name to the previous IEmailFinderEntry
+		entries[entries.length - 1].last_name = value;
+	} else if (name.includes('middle')) {
+		// Add last_name to the previous IEmailFinderEntry
+		entries[entries.length - 1].middle_name = value;
+	} else if (name.includes('full')) {
+		// Add last_name to the previous IEmailFinderEntry
+		entries[entries.length - 1].full_name = value;
+	}
+}
+
+function convertDomainSearchStringValue(value: string, name: string, idx: number, entries: IItemInputEntry[]): void {
+	// Expect a domain for string values
+	if (name.includes('domain')) {
+		entries.push({ domain: value });
+	}
+}
+
 function convertStringValue(value: string, name: string, idx: number, mode: Mode, entries: IItemInputEntry[]): void {
 	switch (mode) {
-		case Mode.VALIDATION: {
-			// Expect either an email or ip address for string values
-			if (name.includes('email')) {
-				entries.push({ email_address: value });
-				return;
-			}
+		case Mode.VALIDATION:
+			convertValidationStringValue(value, name, idx, entries);
+			return;
 
-			if (name.includes('ip')) {
-				if (entries.length === 0) {
-					throw new ApplicationError(
-						`Invalid assignment value '${name}' at position ${idx + 1}: Expected email field before ip field.`,
-					);
-				}
-				// Add the ip_address to the previous IEmailEntry
-				entries[entries.length - 1].ip_address = value;
-				return;
-			}
-			break;
-		}
-		case Mode.SCORING: {
-			// Expect an email address for string values
-			if (name.includes('email')) {
-				entries.push({ email_address: value });
-				return;
-			}
-			break;
-		}
-		case Mode.EMAIL_FINDER: {
-			// Expect a domain for string values
-			if (name.includes('domain')) {
-				entries.push({ domain: value });
-				return;
-			}
-			break;
-		}
+		case Mode.SCORING:
+			convertScoringStringValue(value, name, idx, entries);
+			return;
+
+		case Mode.EMAIL_FINDER:
+			convertEmailFinderStringValue(value, name, idx, entries);
+			return;
+
+		case Mode.DOMAIN_SEARCH:
+			convertDomainSearchStringValue(value, name, idx, entries);
+			return;
 	}
 }
 
@@ -397,6 +479,7 @@ function convertToEntries(value: unknown, mode: Mode, itemInputType: ItemInputOp
 			name = 'emails';
 			break;
 		case Mode.EMAIL_FINDER:
+		case Mode.DOMAIN_SEARCH:
 			name = 'values';
 			break;
 	}
@@ -489,17 +572,27 @@ export function getBinaryData(context: IExecuteFunctions, i: number, binaryKey: 
 }
 
 export interface IStringFields {
-	[key: string]: string;
+	[key: string]: string | object | object[];
 }
 
 export function toFields(header: string[], values: string[]): IStringFields {
-	return Object.fromEntries(header.map((k: string, i: number): [string, string] => [k, values[i]]));
+	return Object.fromEntries(
+		header.map((k: string, i: number): [string, string | object | object[]] => {
+			let value = values[i];
+
+			// Domain Search 'ZB Other Domain Formats' column is returned as a pseudo JSON array. Replace single quotes with double and parse as JSON
+			if (value.startsWith('[{') || value.startsWith('{')) {
+				value = value.replace(/'/g, '"');
+				value = JSON.parse(value);
+			}
+
+			return [k, value];
+		}),
+	);
 }
 
-const quotePattern = /^"(.*)"$/;
-
 export function splitLine(line: string): string[] {
-	return line.split(',').map((value) => quotePattern.exec(value)?.[1] ?? value);
+	return line.split(/,"/).map((s) => s.slice(0, -1));
 }
 
 export function isBinary(body: unknown): body is Buffer | Readable {
@@ -604,17 +697,29 @@ export async function convertEntriesToCsv(
 			rows = [['email_address']];
 			rows.push(...(entries as IEmailEntry[]).map((e) => [e.email_address]));
 			break;
-		case Mode.EMAIL_FINDER:
-			rows = [['domain', 'first_name', 'last_name', 'middle_name', 'full_name']];
-			rows.push(
-				...(entries as IEmailFinderEntry[]).map((e) => [
-					e.domain,
-					defaultString(e.first_name),
-					defaultString(e.last_name),
-					defaultString(e.middle_name),
-					defaultString(e.full_name),
-				]),
-			);
+		case Mode.EMAIL_FINDER: {
+			const nameType = context.getNodeParameter(NameType.name, i, NameTypeOptions.FULL) as string;
+
+			if (nameType === NameTypeOptions.FULL) {
+				rows = [['domain', 'full_name']];
+				rows.push(...(entries as IEmailFinderEntry[]).map((e) => [e.domain, defaultString(e.full_name)]));
+			} else {
+				rows = [['domain', 'first_name', 'last_name', 'middle_name']];
+				rows.push(
+					...(entries as IEmailFinderEntry[]).map((e) => [
+						e.domain,
+						defaultString(e.first_name),
+						defaultString(e.last_name),
+						defaultString(e.middle_name),
+					]),
+				);
+			}
+
+			break;
+		}
+		case Mode.DOMAIN_SEARCH:
+			rows = [['domain']];
+			rows.push(...(entries as IDomainSearchEntry[]).map((e) => [e.domain]));
 			break;
 	}
 

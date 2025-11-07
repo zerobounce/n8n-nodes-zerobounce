@@ -34,9 +34,17 @@ const FindFields: INodeProperties[] = [
 	FindBy,
 	...[Domain].map(addDisplayOptions({ [FindBy.name]: [FindByType.DOMAIN] })),
 	...[CompanyName].map(addDisplayOptions({ [FindBy.name]: [FindByType.COMPANY_NAME] })),
-	FirstName,
+	{
+		...FirstName,
+		description:
+			'(Conditional) The first name of the person whose email format is being searched. Required if last name is not present.',
+	},
 	MiddleName,
-	LastName,
+	{
+		...LastName,
+		description:
+			'(Conditional) The last name of the person whose email format is being searched. Required if first name is not present.',
+	},
 ].map(
 	addDisplayOptions({
 		resource: [Resources.EmailFinder],
@@ -158,10 +166,7 @@ const SendFileFields: INodeProperties[] = [
 );
 
 const GetFileFields: INodeProperties[] = [
-	{
-		...FileId,
-		default: '={{ $json.body.file_id }}',
-	},
+	FileId,
 	{
 		...FileName,
 		placeholder: 'n8n_email_finder_results.csv',
