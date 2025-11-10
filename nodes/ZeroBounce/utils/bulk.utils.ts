@@ -34,6 +34,7 @@ import {
 } from '../fields/email-finder.field';
 import { IpAddressColumnNumber } from '../fields/ip-address-column.field';
 import { ReturnUrl } from '../fields/return-url.field';
+import { IncludeFile } from '../fields/include-file.field';
 
 export interface IBulkErrorResponse extends IDataObject {
 	success: boolean;
@@ -333,7 +334,10 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 
 	response.item_count = details.itemCount;
 
-	const binary = inputType === SendFileInputFieldType.FILE ? undefined : { data: details.binaryData };
+	const binary =
+		inputType === SendFileInputFieldType.ITEMS && context.getNodeParameter(IncludeFile.name, i)
+			? { data: details.binaryData }
+			: undefined;
 
 	return [
 		{
@@ -494,6 +498,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 		case GetFileOutputFieldType.FIELDS: {
 			const batch = context.getNodeParameter(Batch.name, i) as boolean;
 			const results = await convertFileToFields(binaryData);
+			const binary = context.getNodeParameter(IncludeFile.name, i) ? { data: binaryData } : undefined;
 
 			if (batch) {
 				// Return a single result containing the entire results batch
@@ -504,6 +509,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 							total_items: results.length,
 							results: results,
 						},
+						binary: binary,
 					} as INodeExecutionData,
 				] as INodeExecutionData[];
 			} else {
@@ -517,6 +523,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 								total_items: results.length,
 								result: result,
 							},
+							binary: index > 0 ? undefined : binary,
 						}) as INodeExecutionData,
 				);
 			}

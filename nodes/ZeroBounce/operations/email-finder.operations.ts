@@ -28,6 +28,7 @@ import {
 	NameType,
 	NameTypeOptions,
 } from '../fields/email-finder.field';
+import { IncludeFile } from '../fields/include-file.field';
 
 const FindFields: INodeProperties[] = [
 	ApiEndpoint,
@@ -37,13 +38,15 @@ const FindFields: INodeProperties[] = [
 	{
 		...FirstName,
 		description:
-			'(Conditional) The first name of the person whose email format is being searched. Required if last name is not present.',
+			'(Conditional) The first name of the person whose email format is being searched',
+		hint: 'Required if last name is not set',
 	},
 	MiddleName,
 	{
 		...LastName,
 		description:
-			'(Conditional) The last name of the person whose email format is being searched. Required if first name is not present.',
+			'(Conditional) The last name of the person whose email format is being searched',
+		hint: 'Required if first name is not set',
 	},
 ].map(
 	addDisplayOptions({
@@ -140,6 +143,7 @@ const FullNameFields: INodeProperties[] = [
 
 const ItemInputFields: INodeProperties[] = [
 	CombineItems,
+	IncludeFile,
 	NameType,
 	ItemInputType,
 	{
@@ -172,7 +176,7 @@ const GetFileFields: INodeProperties[] = [
 		placeholder: 'n8n_email_finder_results.csv',
 	},
 	GetFileOutputType,
-	...[Batch].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
+	...[Batch, IncludeFile].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.EmailFinder],

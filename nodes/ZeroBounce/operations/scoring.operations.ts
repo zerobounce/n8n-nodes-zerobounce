@@ -15,6 +15,7 @@ import { FileId } from '../fields/file-id.field';
 import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-output-type.field';
 import { Batch } from '../fields/batch.field';
 import { ItemInputAssignment, ItemInputJson, ItemInputMapped, ItemInputType } from '../fields/item-input.field';
+import { IncludeFile } from '../fields/include-file.field';
 
 const ScoreFields: INodeProperties[] = [
 	// prettier-ignore
@@ -32,6 +33,7 @@ const ScoreFields: INodeProperties[] = [
 
 const ItemInputFields: INodeProperties[] = [
 	CombineItems,
+	IncludeFile,
 	ItemInputType,
 	{
 		...ItemInputAssignment,

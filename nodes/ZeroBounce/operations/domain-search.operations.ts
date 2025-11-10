@@ -15,6 +15,7 @@ import { Batch } from '../fields/batch.field';
 import { DomainColumnNumber } from '../fields/domain-column.field';
 import { ItemInputAssignment, ItemInputJson, ItemInputMapped, ItemInputType } from '../fields/item-input.field';
 import { FindBy, FindByType } from '../fields/email-finder.field';
+import { IncludeFile } from '../fields/include-file.field';
 
 const FindFields: INodeProperties[] = [
 	ApiEndpoint,
@@ -37,6 +38,7 @@ const BinaryFileFields: INodeProperties[] = [
 
 const ItemInputFields: INodeProperties[] = [
 	CombineItems,
+	IncludeFile,
 	ItemInputType,
 	{
 		...ItemInputAssignment,
@@ -89,7 +91,7 @@ const GetFileFields: INodeProperties[] = [
 		placeholder: 'n8n_domain_search_results.csv',
 	},
 	GetFileOutputType,
-	...[Batch].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
+	...[Batch, IncludeFile].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.DomainSearch],

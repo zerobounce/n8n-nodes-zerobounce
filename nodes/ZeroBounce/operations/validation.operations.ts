@@ -20,6 +20,7 @@ import { FileId } from '../fields/file-id.field';
 import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-output-type.field';
 import { Batch } from '../fields/batch.field';
 import { ItemInputAssignment, ItemInputJson, ItemInputMapped, ItemInputType } from '../fields/item-input.field';
+import { IncludeFile } from '../fields/include-file.field';
 
 const ValidateFields: INodeProperties[] = [
 	// prettier-ignore
@@ -70,7 +71,12 @@ const BatchValidateFields: INodeProperties[] = [Timeout, ActivityData, VerifyPlu
 	}),
 );
 
-const EmailBatchFields: INodeProperties[] = [CombineItems, ...ValidateItemInputFields];
+const ItemInputFields: INodeProperties[] = [
+	// prettier-ignore
+	CombineItems,
+	IncludeFile,
+	...ValidateItemInputFields,
+];
 
 const BinaryFileFields: INodeProperties[] = [
 	// prettier-ignore
@@ -89,7 +95,7 @@ const SendFileFields: INodeProperties[] = [
 	ReturnUrl,
 	SendFileInputType,
 	...BinaryFileFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
-	...EmailBatchFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
+	...ItemInputFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.Validation],
@@ -108,7 +114,7 @@ const GetFileFields: INodeProperties[] = [
 		placeholder: 'n8n_validation_results.csv',
 	},
 	GetFileOutputType,
-	...[Batch].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
+	...[Batch, IncludeFile].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.Validation],
