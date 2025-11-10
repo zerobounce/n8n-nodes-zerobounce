@@ -206,5 +206,5 @@ export const ValidationOperationHints: NodeHint[] = [
 	documentationHint(Operations.BulkValidationSendFile, 'Bulk Validation: Send File', Documentation.BulkValidationSendFile),
 	documentationHint(Operations.BulkValidationGetFile, 'Bulk Validation: Get File', Documentation.BulkValidationGetFile),
 	documentationHint(Operations.BulkValidationFileStatus, 'Bulk Validation: File Status',Documentation.BulkValidationFileStatus),
-	documentationHint(Operations.BulkValidationFileStatus, 'Bulk Validation: Delete File', Documentation.BulkValidationDeleteFile),
+	documentationHint(Operations.BulkValidationDeleteFile, 'Bulk Validation: Delete File', Documentation.BulkValidationDeleteFile),
 ];

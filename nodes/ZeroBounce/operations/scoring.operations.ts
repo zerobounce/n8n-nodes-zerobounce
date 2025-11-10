@@ -184,5 +184,5 @@ export const ScoringOperationHints: NodeHint[] = [
 	documentationHint(Operations.BulkScoringSendFile, 'Bulk A.I. Scoring: Send File', Documentation.BulkScoringSendFile),
 	documentationHint(Operations.BulkScoringGetFile, 'Bulk A.I. Scoring: Get File', Documentation.BulkScoringGetFile),
 	documentationHint(Operations.BulkScoringFileStatus, 'Bulk A.I. Scoring: File Status', Documentation.BulkScoringFileStatus),
-	documentationHint(Operations.BulkScoringFileStatus, 'Bulk A.I. Scoring: Delete File', Documentation.BulkScoringDeleteFile),
+	documentationHint(Operations.BulkScoringDeleteFile, 'Bulk A.I. Scoring: Delete File', Documentation.BulkScoringDeleteFile),
 ];
