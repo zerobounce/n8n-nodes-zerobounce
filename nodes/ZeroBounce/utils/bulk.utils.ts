@@ -33,6 +33,7 @@ import {
 	NameTypeOptions,
 } from '../fields/email-finder.field';
 import { IpAddressColumnNumber } from '../fields/ip-address-column.field';
+import { ReturnUrl } from '../fields/return-url.field';
 
 export interface IBulkErrorResponse extends IDataObject {
 	success: boolean;
@@ -142,6 +143,7 @@ function sendFileFileInputRequest(context: IExecuteFunctions, i: number, mode: M
 			return {
 				email_address_column: getNumberParameter(context, i, EmailColumnNumber.name, 1) as number,
 				remove_duplicate: context.getNodeParameter(RemoveDuplicates.name, i) as boolean,
+				return_url: context.getNodeParameter(ReturnUrl.name, i) as string,
 				ip_address_column:
 					mode === Mode.VALIDATION ? getNumberParameter(context, i, IpAddressColumnNumber.name, 2) : undefined,
 			} as ISendFileValidationOrScoringRequest;
@@ -167,6 +169,8 @@ function sendFileItemsInputRequest(context: IExecuteFunctions, i: number, mode: 
 		case Mode.VALIDATION:
 		case Mode.SCORING:
 			return {
+				remove_duplicate: context.getNodeParameter(RemoveDuplicates.name, i) as boolean,
+				return_url: context.getNodeParameter(ReturnUrl.name, i) as string,
 				email_address_column: 1,
 				ip_address_column: mode === Mode.VALIDATION ? 2 : undefined,
 			} as ISendFileValidationOrScoringRequest;
