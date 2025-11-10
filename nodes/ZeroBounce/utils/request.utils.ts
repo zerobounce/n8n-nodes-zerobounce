@@ -1,10 +1,10 @@
 import {
-	ApplicationError,
 	IDataObject,
 	IExecuteFunctions,
 	IHttpRequestOptions,
 	IN8nHttpFullResponse,
 	NodeApiError,
+	NodeOperationError,
 } from 'n8n-workflow';
 import { BaseUrl, BulkEndpoint, Credentials, Endpoint } from '../enums';
 import { isBlank } from './handler.utils';
@@ -47,47 +47,41 @@ export async function zbRequest(
 	returnError?: boolean,
 ): Promise<IN8nHttpFullResponse> {
 	if (isBlank(requestOptions.url)) {
-		throw new ApplicationError('zbRequest called without a valid URL.');
+		throw new NodeOperationError(context.getNode(), 'zbRequest called without a valid URL.');
 	}
 
 	// Always return the full response so we can check the statusCode
 	requestOptions.returnFullResponse = true;
 
 	const method = (requestOptions.method ?? 'GET').toUpperCase();
+	const logMessage = `ZeroBounce Request: ${requestOptions.method} ${requestOptions.baseURL}${requestOptions.url}`;
 
 	switch (method) {
 		case 'GET':
-			context.logger.info(
-				`ZeroBounce Request: ${requestOptions.method} ${requestOptions.baseURL}${requestOptions.url} queryParams='${JSON.stringify(requestOptions?.qs)}'`,
-			);
+			context.logger.debug(`${logMessage} queryParams='${JSON.stringify(requestOptions.qs ?? {})}'`);
 			break;
 
 		case 'POST':
 			if (!requestOptions.body) {
-				throw new ApplicationError('Either a body or formData must be provided for a POST request.');
+				throw new NodeOperationError(
+					context.getNode(),
+					'Either a body or formData must be provided for a POST request.',
+				);
 			}
 
 			if (requestOptions.body instanceof FormData) {
 				const formData = extractFormDataSummary(requestOptions.body);
-
-				context.logger.info(
-					`ZeroBounce Request: ${requestOptions.method} ${requestOptions.baseURL}${requestOptions.url} formData='${JSON.stringify(formData)}'`,
-				);
+				context.logger.debug(`${logMessage} formData='${JSON.stringify(formData)}'`);
 			} else if (requestOptions.body instanceof URLSearchParams) {
 				const urlSearchParams = extractFormDataSummary(requestOptions.body);
-
-				context.logger.info(
-					`ZeroBounce Request: ${requestOptions.method} ${requestOptions.baseURL}${requestOptions.url} urlSearchParams='${JSON.stringify(urlSearchParams)}'`,
-				);
+				context.logger.debug(`${logMessage} urlSearchParams='${JSON.stringify(urlSearchParams)}'`);
 			} else {
-				context.logger.info(
-					`ZeroBounce Request: ${requestOptions.method} ${requestOptions.baseURL}${requestOptions.url} body='${JSON.stringify(requestOptions.body)}'`,
-				);
+				context.logger.debug(`${logMessage} body='${JSON.stringify(requestOptions.body ?? {})}'`);
 			}
 			break;
 
 		default:
-			throw new ApplicationError(`Unsupported method '${requestOptions.method}'`);
+			throw new NodeOperationError(context.getNode(), `Unsupported method '${requestOptions.method}'`);
 	}
 
 	let response: IN8nHttpFullResponse;
@@ -99,11 +93,11 @@ export async function zbRequest(
 			requestOptions,
 		)) as IN8nHttpFullResponse;
 	} catch (error) {
-		context.logger.info(`ZeroBounce API call failed with status ${error?.httpCode ?? 'unknown'}: ${error.message}`);
+		context.logger.debug(`ZeroBounce API call failed with status ${error?.httpCode ?? 'unknown'}: ${error.message}`);
 		throw error;
 	}
 
-	context.logger.info(
+	context.logger.debug(
 		`ZeroBounce Response: ${method} ${requestOptions.baseURL}${requestOptions.url} status=${response.statusCode ?? 'unknown'}`,
 	);
 

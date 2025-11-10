@@ -8,7 +8,7 @@ import {
 	isErrorResponse,
 	toDate,
 } from '../utils/handler.utils';
-import { ApplicationError, IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
+import { IDataObject, IExecuteFunctions, INodeExecutionData, NodeOperationError } from 'n8n-workflow';
 import { BaseUrl, Endpoint, Operations } from '../enums';
 import { ApiEndpoint } from '../fields/api-endpoint.field';
 import { StartDate } from '../fields/start-date.field';
@@ -87,30 +87,37 @@ async function getCredits(context: IExecuteFunctions, i: number): Promise<INodeE
 	const response = fullResponse.body as IGetCreditsResponse | IErrorResponse;
 
 	if (isErrorResponse(response)) {
-		throw new ApplicationError(`Failed to get credits balance: ${response.error}`);
+		throw new NodeOperationError(context.getNode(), `Failed to get credits balance: ${response.error}`);
 	}
 
 	const availableCredits = Number(response.Credits);
 
 	if (Number.isNaN(availableCredits)) {
-		throw new ApplicationError(
+		throw new NodeOperationError(
+			context.getNode(),
 			`Invalid response from API: expected numeric 'Credits' but got ${JSON.stringify(response)}`,
 		);
 	}
 
 	if (availableCredits === -1) {
-		throw new ApplicationError(`Failed to get available credits`);
+		throw new NodeOperationError(context.getNode(), `Failed to get available credits`);
 	}
 
 	if (creditsRequired && creditsRequired > 0 && availableCredits < creditsRequired) {
-		throw new ApplicationError(
-			`Not enough credits to perform validation. Required '${creditsRequired}' but only have '${availableCredits}' left on the account`,
+		throw new NodeOperationError(
+			context.getNode(),
+			`Not enough credits. Required: ${creditsRequired}, available: ${availableCredits}`,
+			{
+				itemIndex: i,
+				description: 'You must have sufficient account credits to perform this operation.',
+			},
 		);
 	}
 
 	return [
 		{
 			json: response,
+			pairedItem: i,
 		} as INodeExecutionData,
 	] as INodeExecutionData[];
 }
@@ -125,20 +132,21 @@ async function getApiUsage(context: IExecuteFunctions, i: number): Promise<INode
 	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
 
 	const request = {
-		start_date: toDate(startDate),
-		end_date: toDate(endDate),
+		start_date: toDate(context, startDate),
+		end_date: toDate(context, endDate),
 	} as IGetApiUsageRequest;
 
 	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.GetApiUsage, request);
 	const response = fullResponse.body as IGetApiUsageResponse | IErrorResponse;
 
 	if (isErrorResponse(response)) {
-		throw new ApplicationError(`Failed to get api usage: ${JSON.stringify(response.error)}`);
+		throw new NodeOperationError(context.getNode(), `Failed to get api usage: ${JSON.stringify(response.error)}`);
 	}
 
 	return [
 		{
 			json: response,
+			pairedItem: i,
 		} as INodeExecutionData,
 	] as INodeExecutionData[];
 }
@@ -150,7 +158,7 @@ async function listFilters(context: IExecuteFunctions, i: number): Promise<INode
 	const response = fullResponse.body as IListFiltersResponse[] | IAltErrorResponse;
 
 	if (isAltErrorResponse(response)) {
-		throw new ApplicationError(`Failed to get list filters: ${JSON.stringify(response.Error)}`);
+		throw new NodeOperationError(context.getNode(), `Failed to get list filters: ${JSON.stringify(response.Error)}`);
 	}
 
 	return [
@@ -158,6 +166,7 @@ async function listFilters(context: IExecuteFunctions, i: number): Promise<INode
 			json: {
 				filters: response,
 			},
+			pairedItem: i,
 		},
 	] as INodeExecutionData[];
 }
@@ -188,7 +197,8 @@ async function addOrDeleteFilter(
 	const response = fullResponse.body as IAddFilterResponse | IDeleteFilterResponse | IAltErrorResponse;
 
 	if (isAltErrorResponse(response)) {
-		throw new ApplicationError(
+		throw new NodeOperationError(
+			context.getNode(),
 			`Failed to ${mode === AddOrDelete.ADD ? 'add' : 'delete'} list filter: ${JSON.stringify(response.Error)}`,
 		);
 	}
@@ -196,6 +206,7 @@ async function addOrDeleteFilter(
 	return [
 		{
 			json: response,
+			pairedItem: i,
 		},
 	] as INodeExecutionData[];
 }
@@ -214,7 +225,7 @@ class AccountHandler implements IOperationHandler {
 			case Operations.AccountDeleteFilter:
 				return addOrDeleteFilter(context, i, AddOrDelete.DELETE);
 			default:
-				throw new ApplicationError(`Operation ${operation} not supported`);
+				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`);
 		}
 	}
 }

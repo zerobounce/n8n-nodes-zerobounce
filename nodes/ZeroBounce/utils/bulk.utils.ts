@@ -1,5 +1,5 @@
 import { IRequestParams, zbGetFileRequest, zbGetRequest, zbPostRequest } from './request.utils';
-import { ApplicationError, IBinaryData, IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
+import { IBinaryData, IDataObject, IExecuteFunctions, INodeExecutionData, NodeOperationError } from 'n8n-workflow';
 import {
 	convertEntriesToCsv,
 	convertFileToFields,
@@ -197,7 +197,7 @@ async function sendFileDetails(
 	mode: Mode,
 	inputType: SendFileInputFieldType,
 	fileName?: string,
-): Promise<ISendFileDetails> {
+): Promise<ISendFileDetails | null> {
 	const details = {} as ISendFileDetails;
 
 	details.endpoint = sendFileEndpoint(mode);
@@ -214,23 +214,25 @@ async function sendFileDetails(
 			details.binaryData.fileName = fileName;
 		}
 	} else {
-		details.request = sendFileItemsInputRequest(context, i, mode);
-
 		details.combineItems = context.getNodeParameter(CombineItems.name, i, true, { ensureType: 'boolean' }) as boolean;
 
 		// Only process the first execution if combine items is enabled
-		if (!details.combineItems || i === 0) {
-			const csvOutput: CsvOutput = await convertEntriesToCsv(context, i, details.combineItems, mode);
-
-			details.binaryData = await context.helpers.prepareBinaryData(
-				Buffer.from(csvOutput.contents, 'utf8'),
-				defaultString(fileName, `n8n_${mode}.csv`),
-				'text/csv',
-			);
-			details.buffer = csvOutput.contents;
-			details.itemCount = csvOutput.lineCount - 1;
-			details.request.has_header_row = true;
+		if (details.combineItems && i > 0) {
+			return null;
 		}
+
+		details.request = sendFileItemsInputRequest(context, i, mode);
+
+		const csvOutput: CsvOutput = await convertEntriesToCsv(context, i, details.combineItems, mode);
+
+		details.binaryData = await context.helpers.prepareBinaryData(
+			Buffer.from(csvOutput.contents, 'utf8'),
+			defaultString(fileName, `n8n_${mode}.csv`),
+			'text/csv',
+		);
+		details.buffer = csvOutput.contents;
+		details.itemCount = csvOutput.lineCount - 1;
+		details.request.has_header_row = true;
 	}
 
 	return details;
@@ -259,7 +261,7 @@ async function sendFileDetails(
  *   - `file_id`: The unique file identifier for later status checks.
  *   - `return_url`: The callback URL if provided.
  *
- * @throws {ApplicationError} If:
+ * @throws {NodeOperationError} If:
  * - The input type is missing or invalid.
  * - No binary input is found when using the “File” input type.
  * - The API returns an error (`isBulkErrorResponse` is true).
@@ -281,21 +283,26 @@ async function sendFileDetails(
  * - When `inputType` = `FILE`, the node uploads an existing binary file from upstream input.
  * - When `inputType` = `EMAIL_BATCH`, the node dynamically generates a CSV file from email batch data.
  * - The correct endpoint (`/sendfile` or `/scoring/sendfile`) is automatically selected based on `mode`.
- * - Throws detailed `ApplicationError` messages for all failure conditions to aid debugging.
+ * - Throws detailed `NodeOperationError` messages for all failure conditions to aid debugging.
  */
 export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode): Promise<INodeExecutionData[]> {
 	const inputType = context.getNodeParameter(SendFileInputType.name, i) as SendFileInputFieldType;
 
 	if (inputType === undefined || inputType === null) {
-		throw new ApplicationError('Please select input type');
+		throw new NodeOperationError(context.getNode(), 'Please select input type');
 	}
 
 	let fileName: string | undefined = context.getNodeParameter(FileName.name, i) as string | undefined;
 
-	const details: ISendFileDetails = await sendFileDetails(context, i, mode, inputType, fileName);
+	const details: ISendFileDetails | null = await sendFileDetails(context, i, mode, inputType, fileName);
+
+	// If combine items is enabled and this isn't the first item, null is returned
+	if (details === null) {
+		return [];
+	}
 
 	// Get the filename to use from the binary data if not overridden
-	fileName = defaultString(fileName, details.binaryData.fileName);
+	fileName = defaultString(fileName, details?.binaryData?.fileName);
 
 	const blob = new Blob([details.buffer], { type: 'text/csv' });
 
@@ -313,7 +320,7 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 
 	if (isBulkErrorResponse(response)) {
 		const error = defaultString(response.error_message, defaultString(response.message, 'Unknown error'));
-		throw new ApplicationError('Error sending file: ' + error);
+		throw new NodeOperationError(context.getNode(), 'Error sending file: ' + error);
 	}
 
 	if ('return_url' in details.request) {
@@ -328,6 +335,7 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 		{
 			json: response,
 			binary: binary,
+			pairedItem: i,
 		} as INodeExecutionData,
 	] as INodeExecutionData[];
 }
@@ -351,7 +359,7 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
  * - **Fields output mode:** Returns either one item with all parsed results (`Batch = true`),
  *   or multiple items where each JSON entry represents one record in the CSV file.
  *
- * @throws {ApplicationError} If:
+ * @throws {NodeOperationError} If:
  * - The API response is not binary (`content-type` not `application/octet-stream`).
  * - The API returns an error message in JSON or text format.
  * - The response body is not valid binary data.
@@ -437,14 +445,14 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 
 	if (contentType !== 'application/octet-stream') {
 		const message = getFileErrorMessage(contentType, response);
-		throw new ApplicationError('Failed to get file: ' + message);
+		throw new NodeOperationError(context.getNode(), 'Failed to get file: ' + message);
 	}
 
 	const remoteFilename = getFileNameFromHeader(headers, fileId);
 	const fileName = defaultString(context.getNodeParameter(FileName.name, i) as string, remoteFilename);
 
 	if (!isBinary(response)) {
-		throw new ApplicationError(`Invalid response body: ${JSON.stringify(response)}`);
+		throw new NodeOperationError(context.getNode(), `Invalid response body: ${JSON.stringify(response)}`);
 	}
 
 	const binaryData = await context.helpers.prepareBinaryData(response, fileName, 'text/csv');
@@ -452,7 +460,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 	const outputType = context.getNodeParameter(GetFileOutputType.name, i) as GetFileOutputFieldType;
 
 	if (outputType === undefined || outputType === null) {
-		throw new ApplicationError('Please select output type');
+		throw new NodeOperationError(context.getNode(), 'Please select output type');
 	}
 
 	const baseResponse: INodeExecutionData = {
@@ -465,6 +473,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 			item_number: undefined,
 			total_items: undefined,
 		},
+		pairedItem: i,
 	};
 
 	switch (outputType) {
@@ -516,7 +525,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
  *
  * This function queries the ZeroBounce Bulk API `/filestatus` or '/scoring/filestatus' endpoint using the provided file ID
  * to check whether a previously uploaded file is still being processed, completed, or has encountered an error.
- * If the API response indicates failure (`success: false`), the function throws an `ApplicationError`
+ * If the API response indicates failure (`success: false`), the function throws an `NodeOperationError`
  * with the returned error message.
  *
  * @param context - The n8n execution context providing access to parameters, input data, and HTTP helpers.
@@ -531,7 +540,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
  *   - `complete_percentage`: Completion percentage as a string.
  *   - `return_url`: Callback URL if one was provided during upload.
  *
- * @throws {ApplicationError} If:
+ * @throws {NodeOperationError} If:
  * - The ZeroBounce API returns `success: false`.
  * - The response format is invalid or missing required fields.
  *
@@ -581,12 +590,13 @@ export async function fileStatus(context: IExecuteFunctions, i: number, mode: Mo
 
 	if (isBulkErrorResponse(response)) {
 		const error = response?.error_message ?? response?.message ?? 'Unknown error';
-		throw new ApplicationError('Error getting file status: ' + error);
+		throw new NodeOperationError(context.getNode(), 'Error getting file status: ' + error);
 	}
 
 	return [
 		{
 			json: response,
+			pairedItem: i,
 		} as INodeExecutionData,
 	] as INodeExecutionData[];
 }
@@ -611,7 +621,7 @@ export async function fileStatus(context: IExecuteFunctions, i: number, mode: Mo
  *   - `message` or `error_message`: Message returned from the API.
  *   - `file_id`: The ID of the deleted file.
  *
- * @throws {ApplicationError} If the API request fails or returns an unexpected response.
+ * @throws {NodeOperationError} If the API request fails or returns an unexpected response.
  *
  * @example
  * // Example output (successful deletion)
@@ -677,6 +687,7 @@ export async function deleteFile(context: IExecuteFunctions, i: number, mode: Mo
 				deleted: response.success,
 				...response,
 			},
+			pairedItem: i,
 		},
 	] as INodeExecutionData[];
 }

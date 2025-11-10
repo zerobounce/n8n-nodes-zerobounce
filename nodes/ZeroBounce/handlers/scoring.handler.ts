@@ -1,4 +1,4 @@
-import { ApplicationError, IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
+import { IDataObject, IExecuteFunctions, INodeExecutionData, NodeOperationError } from 'n8n-workflow';
 import { IErrorResponse, IOperationHandler, isErrorResponse } from '../utils/handler.utils';
 import { IRequestParams, zbGetRequest } from '../utils/request.utils';
 import { BaseUrl, Endpoint, Mode, Operations } from '../enums';
@@ -27,12 +27,13 @@ async function score(context: IExecuteFunctions, i: number): Promise<INodeExecut
 	const response = fullResponse.body as IScoreResult | IErrorResponse;
 
 	if (isErrorResponse(response)) {
-		throw new ApplicationError('Scoring failed: ' + response.error);
+		throw new NodeOperationError(context.getNode(), 'Scoring failed: ' + response.error);
 	}
 
 	return [
 		{
 			json: response,
+			pairedItem: i,
 		} as INodeExecutionData,
 	] as INodeExecutionData[];
 }
@@ -51,7 +52,7 @@ export class ScoringHandler implements IOperationHandler {
 			case Operations.BulkScoringDeleteFile:
 				return deleteFile(context, i, Mode.SCORING);
 			default:
-				throw new ApplicationError(`Operation ${operation} not supported`);
+				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`);
 		}
 	}
 }

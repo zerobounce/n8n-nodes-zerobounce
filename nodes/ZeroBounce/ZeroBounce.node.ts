@@ -1,4 +1,11 @@
-import { IExecuteFunctions, INodeExecutionData, INodeType, INodeTypeDescription } from 'n8n-workflow';
+import {
+	IExecuteFunctions,
+	INodeExecutionData,
+	INodeType,
+	INodeTypeDescription,
+	NodeConnectionTypes,
+	NodeOperationError,
+} from 'n8n-workflow';
 import { AccountOperationHints, AccountOperations } from './operations/account.operations';
 import { ValidationOperationHints, ValidationOperations } from './operations/validation.operations';
 import { getHandler, IOperationHandler } from './utils/handler.utils';
@@ -20,17 +27,17 @@ export class ZeroBounce implements INodeType {
 		version: 1,
 		subtitle: '={{$parameter["resource"] + ": " + $parameter["operation"]}}',
 		description: 'Validate and verify emails using the ZeroBounce API.',
+		defaults: {
+			name: 'ZeroBounce',
+		},
+		inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
+		usableAsTool: true,
 		codex: {
 			categories: ['Data Validation', 'Email Verification'],
 			subcategories: { 'Data Validation': ['Email'] },
 		},
 		documentationUrl: 'https://www.zerobounce.net/docs/',
-		defaults: {
-			name: 'ZeroBounce',
-		},
-		usableAsTool: true,
-		inputs: ['main'],
-		outputs: ['main'],
 		credentials: [
 			{
 				name: Credentials.ZeroBounceApi,
@@ -110,14 +117,29 @@ export class ZeroBounce implements INodeType {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 
-		for (let i = 0; i < items.length; i++) {
-			const resource = this.getNodeParameter('resource', i);
-			const operation = this.getNodeParameter('operation', i);
-			const operationHandler = getHandler(handlers, resource);
+		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+			try {
+				const resource = this.getNodeParameter('resource', itemIndex);
+				const operation = this.getNodeParameter('operation', itemIndex);
+				const operationHandler = getHandler(this, handlers, resource);
 
-			const responseData = await operationHandler.handle(this, operation, i);
+				const responseData = await operationHandler.handle(this, operation, itemIndex);
 
-			returnData.push(...responseData);
+				returnData.push(...responseData);
+			} catch (error) {
+				if (this.continueOnFail()) {
+					returnData.push({ json: error, error, pairedItem: itemIndex });
+				} else {
+					// Adding `itemIndex` allows other workflows to handle this error
+					if (error.context) {
+						// If the error thrown already contains the context property,
+						// only append the itemIndex
+						error.context.itemIndex = itemIndex;
+						throw error;
+					}
+					throw new NodeOperationError(this.getNode(), error, { itemIndex });
+				}
+			}
 		}
 
 		return [returnData];

@@ -1,4 +1,4 @@
-import { ApplicationError, IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
+import { IDataObject, IExecuteFunctions, INodeExecutionData, NodeOperationError } from 'n8n-workflow';
 import { ApiEndpoint } from '../fields/api-endpoint.field';
 import { BaseUrl, Endpoint, Mode } from '../enums';
 import { FindBy, FindByType } from '../fields/email-finder.field';
@@ -89,7 +89,7 @@ export async function find(context: IExecuteFunctions, i: number, mode: Mode): P
 		const lastName = context.getNodeParameter(LastName.name, i) as string | undefined;
 
 		if (isBlank(firstName) && isBlank(lastName)) {
-			throw new ApplicationError("Email Finder at least first name or last name to be set")
+			throw new NodeOperationError(context.getNode(), 'Email Finder at least first name or last name to be set');
 		}
 
 		request = {
@@ -103,19 +103,23 @@ export async function find(context: IExecuteFunctions, i: number, mode: Mode): P
 		request = {
 			domain: domain,
 			company_name: companyName,
-		}
+		};
 	}
 
 	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.GuessFormat, request);
 	const response = fullResponse.body as IFindResponse | IDomainSearchResponse | IErrorResponse;
 
 	if (isUnsuccessfulResponse(response)) {
-		throw new ApplicationError(`${mode === Mode.EMAIL_FINDER ? 'Email Finder' : 'Domain Search'} failed: ` + response.Message);
+		throw new NodeOperationError(
+			context.getNode(),
+			`${mode === Mode.EMAIL_FINDER ? 'Email Finder' : 'Domain Search'} failed: ` + response.Message,
+		);
 	}
 
 	return [
 		{
 			json: response,
+			pairedItem: i,
 		} as INodeExecutionData,
 	] as INodeExecutionData[];
 }

@@ -1,4 +1,4 @@
-import { ApplicationError, IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
+import { IDataObject, IExecuteFunctions, INodeExecutionData, NodeOperationError } from 'n8n-workflow';
 import {
 	convertItemInput,
 	getNumberParameter,
@@ -74,7 +74,7 @@ interface IValidateBatchResult extends IDataObject {
  * @param {number} i - The index of the current item being processed by n8n.
  * @returns {Promise<INodeExecutionData[]>} A promise that resolves to an array containing the API response as JSON. The response includes details such as validation status, sub-status, domain info, and more.
  *
- * @throws {ApplicationError} If the ZeroBounce API returns an error or the validation fails (e.g., invalid API key, malformed email, or other API-side issues).
+ * @throws {NodeOperationError} If the ZeroBounce API returns an error or the validation fails (e.g., invalid API key, malformed email, or other API-side issues).
  *
  * @example <caption>Example Successful Response</caption>
  * {
@@ -125,12 +125,13 @@ async function validate(context: IExecuteFunctions, i: number): Promise<INodeExe
 	const response = fullResponse.body as IValidateResult | IErrorResponse;
 
 	if (isErrorResponse(response)) {
-		throw new ApplicationError('Validation failed: ' + response.error);
+		throw new NodeOperationError(context.getNode(), 'Validation failed: ' + response.error);
 	}
 
 	return [
 		{
 			json: response,
+			pairedItem: i,
 		} as INodeExecutionData,
 	] as INodeExecutionData[];
 }
@@ -151,7 +152,7 @@ async function validate(context: IExecuteFunctions, i: number): Promise<INodeExe
  *   - `email_batch`: An array of validated email results, each with fields like `address`, `status`, `sub_status`, etc.
  *   - `errors`: (Optional) An array of errors encountered, if any occurred during validation.
  *
- * @throws {ApplicationError} If:
+ * @throws {NodeOperationError} If:
  * - The email batch contains more than 200 entries (ZeroBounce API limit).
  * - The ZeroBounce API returns an error or a general failure response (`errors` with `email_address: 'All'`).
  *
@@ -179,7 +180,10 @@ async function batchValidate(context: IExecuteFunctions, i: number): Promise<INo
 	const emailBatch = convertItemInput(context, i, Mode.VALIDATION) as IEmailEntry[];
 
 	if (emailBatch.length > 200) {
-		throw new ApplicationError('ZeroBounce API allows a maximum of 200 email entries per request.');
+		throw new NodeOperationError(
+			context.getNode(),
+			'ZeroBounce API allows a maximum of 200 email entries per request.',
+		);
 	}
 
 	const request: IValidateBatchRequest = {
@@ -194,12 +198,13 @@ async function batchValidate(context: IExecuteFunctions, i: number): Promise<INo
 	const errors = response.errors;
 
 	if (Array.isArray(errors) && errors.length > 0 && errors[0].email_address === 'All') {
-		throw new ApplicationError('Validation failed: ' + JSON.stringify(response.errors));
+		throw new NodeOperationError(context.getNode(), 'Validation failed: ' + JSON.stringify(response.errors));
 	}
 
 	return [
 		{
 			json: response,
+			pairedItem: i,
 		} as INodeExecutionData,
 	] as INodeExecutionData[];
 }
@@ -220,7 +225,7 @@ export class ValidationHandler implements IOperationHandler {
 			case Operations.BulkValidationDeleteFile:
 				return deleteFile(context, i, Mode.VALIDATION);
 			default:
-				throw new ApplicationError(`Operation ${operation} not supported`);
+				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`);
 		}
 	}
 }

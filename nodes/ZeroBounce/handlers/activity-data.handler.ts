@@ -1,4 +1,4 @@
-import { ApplicationError, IDataObject, IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
+import { IDataObject, IExecuteFunctions, INodeExecutionData, NodeOperationError } from 'n8n-workflow';
 import { IErrorResponse, IOperationHandler, isErrorResponse } from '../utils/handler.utils';
 import { BaseUrl, Endpoint, Operations } from '../enums';
 import { IRequestParams, zbGetRequest } from '../utils/request.utils';
@@ -24,12 +24,13 @@ async function getActivityData(context: IExecuteFunctions, i: number) {
 	const response = fullResponse.body as IGetActivityDataResponse | IErrorResponse;
 
 	if (isErrorResponse(response)) {
-		throw new ApplicationError('Get Activity Data failed: ' + response.error);
+		throw new NodeOperationError(context.getNode(), 'Get Activity Data failed: ' + response.error);
 	}
 
 	return [
 		{
 			json: response,
+			pairedItem: i,
 		} as INodeExecutionData,
 	] as INodeExecutionData[];
 }
@@ -39,7 +40,7 @@ export class ActivityDataHandler implements IOperationHandler {
 		if (operation === Operations.ActivityData) {
 			return getActivityData(context, i);
 		} else {
-			throw new ApplicationError(`Operation ${operation} not supported`);
+			throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`);
 		}
 	}
 }
