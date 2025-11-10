@@ -6,7 +6,7 @@
 	},
 	"description": "n8n node to work with the ZeroBounce API",
 	"license": "MIT",
-	"homepage": "https://www.zerobounce.net/",
+	"homepage": "https://www.zerobounce.net",
 	"keywords": [
 		"n8n-community-node-package",
 		"n8n",

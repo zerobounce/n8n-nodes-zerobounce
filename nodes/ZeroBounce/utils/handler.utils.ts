@@ -11,8 +11,6 @@ import {
 import { ValidationHandler } from '../handlers/validation.handler';
 import AccountHandler from '../handlers/account.handler';
 import { Mode, Resources } from '../enums';
-// eslint-disable-next-line @n8n/community-nodes/no-restricted-imports
-import { Readable } from 'node:stream';
 import { FileId } from '../fields/file-id.field';
 import { ScoringHandler } from '../handlers/scoring.handler';
 import { CombineItems } from '../fields/combine-items.field';
@@ -655,8 +653,8 @@ export function splitLine(line: string): string[] {
 	return line.split(/,"/).map((s) => s.replace(/^"?(.*)"$/, '$1'));
 }
 
-export function isBinary(body: unknown): body is Buffer | Readable {
-	return body instanceof Buffer || body instanceof Readable;
+export function isBinary(body: unknown): body is Buffer {
+	return body instanceof Buffer;
 }
 
 const fileIdPattern = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
