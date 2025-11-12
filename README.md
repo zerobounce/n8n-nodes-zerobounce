@@ -1,4 +1,4 @@
-![ZeroBounce Logo](https://raw.githubusercontent.com/zerobounce/n8n-nodes-zerobounce/main/icons/zerobounce-logo.png)
+![ZeroBounce Logo](https://raw.githubusercontent.com/zerobounce/n8n-nodes-zerobounce/main/icons/zerobounce-logo.svg)
 
 # n8n-nodes-zerobounce
 
@@ -10,8 +10,8 @@ This is an n8n community node for integrating with the ZeroBounce API in your n8
 * [Installation](#installation)
 * [Operations](#operations)
 * [Credentials](#credentials)
-* [Compatibility](#compatibility)
 * [Usage](#usage)
+* [Compatibility](#compatibility)
 * [Resources](#resources)
 
 ## About
