@@ -92,14 +92,19 @@ For more information, see [API Keys Management](https://www.zerobounce.net/docs/
 
 ## Usage
 
+### Workflow Testing
+
+When testing your workflows, use [API Sandbox Mode](https://www.zerobounce.net/docs/email-validation-api-quickstart/#sandbox_mode__v2__) data.
+
 ### Send File
  #### Wait Webhook
-  - Use an [n8n Wait node](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.wait/#on-webhook-call) to wait for a webhook confirming completion of a file
+  - Use a [Wait node](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.wait/#on-webhook-call) to wait for a webhook confirming completion of a file
   - Use Resume mode 'On Webhook Call'
   - Set the HTTP Method to 'POST'
   - Optional: Add a webhook suffix with the options dropdown e.g. `zerobounce`
   - Set the 'return_url' parameter in the Send File node to the webhook URL e.g. `{{$execution.resumeUrl}}/zerobounce`
   - On execution, the URL is generated and the 'Wait' node will wait until the notification is received from ZeroBounce
+  - If the webhook is never called, check the HTTP Method on the wait node is set to 'POST' and view the status of the callback here [API Callback Status](https://www.zerobounce.net/members/API/status)
 
 ## Compatibility
 

@@ -1,5 +1,12 @@
 import { IRequestParams, zbGetFileRequest, zbGetRequest, zbPostRequest } from './request.utils';
-import { IBinaryData, IDataObject, IExecuteFunctions, INodeExecutionData, NodeOperationError } from 'n8n-workflow';
+import {
+	IBinaryData,
+	IBinaryKeyData,
+	IDataObject,
+	IExecuteFunctions,
+	INodeExecutionData,
+	NodeOperationError,
+} from 'n8n-workflow';
 import {
 	convertEntriesToCsv,
 	convertFileToFields,
@@ -471,7 +478,13 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 		throw new NodeOperationError(context.getNode(), 'Please select output type');
 	}
 
-	const baseResponse: INodeExecutionData = {
+	let binary: IBinaryKeyData | undefined = undefined;
+
+	if (outputType === GetFileOutputFieldType.FILE || context.getNodeParameter(IncludeFile.name, i)) {
+		binary = { data: binaryData };
+	}
+
+	const output: INodeExecutionData = {
 		json: {
 			file_id: fileId,
 			file_name: binaryData.fileName,
@@ -481,44 +494,33 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 			item_number: undefined,
 			total_items: undefined,
 		},
+		binary: binary,
 		pairedItem: i,
 	};
 
 	switch (outputType) {
 		case GetFileOutputFieldType.FILE: {
-			return [
-				{
-					...baseResponse,
-					binary: {
-						data: binaryData,
-					},
-				},
-			] as INodeExecutionData[];
+			return [output];
 		}
+
 		case GetFileOutputFieldType.FIELDS: {
 			const batch = context.getNodeParameter(Batch.name, i) as boolean;
 			const results = await convertFileToFields(binaryData);
-			const binary = context.getNodeParameter(IncludeFile.name, i) ? { data: binaryData } : undefined;
 
 			if (batch) {
+				output.json.total_items = results.length;
+				output.json.results = results;
+
 				// Return a single result containing the entire results batch
-				return [
-					{
-						...baseResponse,
-						json: {
-							total_items: results.length,
-							results: results,
-						},
-						binary: binary,
-					} as INodeExecutionData,
-				] as INodeExecutionData[];
+				return [output];
 			} else {
 				// Return a result for each line in the file
 				return results.map(
 					(result, index) =>
 						({
-							...baseResponse,
+							...output,
 							json: {
+								...output.json,
 								item_number: index + 1,
 								total_items: results.length,
 								result: result,
