@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
-     x="0px" y="0px" viewBox="0 0 311.1 114.7"
-     width="100%" style="max-width:500px;height:auto;enable-background:new 0 0 311.1 114.7;" xml:space="preserve">
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" viewBox="0 0 311.1 114.7" width="500px" xml:space="preserve">
   <style type="text/css">
-    .st0 { fill-rule:evenodd; clip-rule:evenodd; fill: #171E25; }
-    .st1 { fill-rule:evenodd; clip-rule:evenodd; fill:#FBDD46; }
-    @media (prefers-color-scheme: dark) {
-      .st0 { fill-rule:evenodd; clip-rule:evenodd; fill: #FFFFFF; }
+    @media (prefers-color-scheme: light) {
+      .st0 { fill-rule:evenodd; clip-rule:evenodd; fill: #171E25; }
     }
+    @media (prefers-color-scheme: dark) {
+      .st0 { fill-rule:evenodd; clip-rule:evenodd; fill: #8B8E92; }
+    }
+    .st1 { fill-rule:evenodd; clip-rule:evenodd; fill:#FBDD46; }
   </style>
     <g id="Symbols">
         <g id="nav---w_x2F_-black-log-in-text" transform="translate(-168.000000, -18.000000)">
