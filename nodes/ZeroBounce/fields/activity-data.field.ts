@@ -7,7 +7,6 @@ export const ActivityData: INodeProperties = {
 	name: Fields.ActivityData,
 	type: 'boolean',
 	default: false,
-	placeholder: 'false',
 	noDataExpression: true,
 	description: 'Whether Activity Data information will be appended to the validation result',
 };

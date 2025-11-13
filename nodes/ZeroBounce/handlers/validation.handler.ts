@@ -106,7 +106,7 @@ interface IValidateBatchResult extends IDataObject {
  * - Handles all request construction and response parsing internally.
  */
 async function validate(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const timeout = getNumberParameter(context, i, Timeout.name);
+	const timeout = getNumberParameter(context, i, Timeout);
 	const activityData = context.getNodeParameter(ActivityData.name, i, false, { ensureType: 'boolean' }) as boolean;
 	const verifyPlus = context.getNodeParameter(VerifyPlus.name, i, false, { ensureType: 'boolean' }) as boolean;
 	const email = context.getNodeParameter(Email.name, i) as string;
@@ -174,7 +174,7 @@ async function validate(context: IExecuteFunctions, i: number): Promise<INodeExe
  * - The function wraps the ZeroBounce response in an n8n `INodeExecutionData` structure for workflow compatibility.
  */
 async function batchValidate(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const timeout = getNumberParameter(context, i, Timeout.name);
+	const timeout = getNumberParameter(context, i, Timeout);
 	const activityData = context.getNodeParameter(ActivityData.name, i, false, { ensureType: 'boolean' }) as boolean;
 	const verifyPlus = context.getNodeParameter(VerifyPlus.name, i, false, { ensureType: 'boolean' }) as boolean;
 	const emailBatch = convertItemInput(context, i, Mode.VALIDATION) as IEmailEntry[];
@@ -225,7 +225,10 @@ export class ValidationHandler implements IOperationHandler {
 			case Operations.BulkValidationDeleteFile:
 				return deleteFile(context, i, Mode.VALIDATION);
 			default:
-				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`);
+				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`, {
+					itemIndex: i,
+					description: 'Please select an operation from the list',
+				});
 		}
 	}
 }

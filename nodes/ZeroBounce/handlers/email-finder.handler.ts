@@ -18,7 +18,10 @@ export class EmailFinderHandler implements IOperationHandler {
 			case Operations.BulkEmailFinderDeleteFile:
 				return deleteFile(context, i, Mode.EMAIL_FINDER);
 			default:
-				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`);
+				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`, {
+					itemIndex: i,
+					description: 'Please select an operation from the list',
+				});
 		}
 	}
 }

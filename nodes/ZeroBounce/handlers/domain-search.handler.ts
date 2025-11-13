@@ -18,7 +18,10 @@ export class DomainSearchHandler implements IOperationHandler {
 			case Operations.BulkDomainSearchDeleteFile:
 				return deleteFile(context, i, Mode.DOMAIN_SEARCH);
 			default:
-				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`);
+				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`, {
+					itemIndex: i,
+					description: 'Please select an operation from the list',
+				});
 		}
 	}
 }

@@ -52,7 +52,10 @@ export class ScoringHandler implements IOperationHandler {
 			case Operations.BulkScoringDeleteFile:
 				return deleteFile(context, i, Mode.SCORING);
 			default:
-				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`);
+				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`, {
+					itemIndex: i,
+					description: 'Please select an operation from the list',
+				});
 		}
 	}
 }

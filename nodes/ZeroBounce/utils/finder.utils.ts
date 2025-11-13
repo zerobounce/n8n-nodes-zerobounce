@@ -89,7 +89,14 @@ export async function find(context: IExecuteFunctions, i: number, mode: Mode): P
 		const lastName = context.getNodeParameter(LastName.name, i) as string | undefined;
 
 		if (isBlank(firstName) && isBlank(lastName)) {
-			throw new NodeOperationError(context.getNode(), 'Email Finder at least first name or last name to be set');
+			throw new NodeOperationError(
+				context.getNode(),
+				`Email Finder requires '${FirstName.displayName}' or '${LastName.displayName}'`,
+				{
+					itemIndex: i,
+					description: `Enter a value for '${FirstName.displayName}', '${LastName.displayName}' or both`,
+				},
+			);
 		}
 
 		request = {

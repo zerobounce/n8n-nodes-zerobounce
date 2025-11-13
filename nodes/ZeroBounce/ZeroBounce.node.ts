@@ -121,7 +121,7 @@ export class ZeroBounce implements INodeType {
 			try {
 				const resource = this.getNodeParameter('resource', itemIndex);
 				const operation = this.getNodeParameter('operation', itemIndex);
-				const operationHandler = getHandler(this, handlers, resource);
+				const operationHandler = getHandler(this, itemIndex, handlers, resource);
 
 				const responseData = await operationHandler.handle(this, operation, itemIndex);
 

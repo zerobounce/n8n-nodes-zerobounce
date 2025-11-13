@@ -5,6 +5,7 @@ import {
 	IDataObject,
 	IExecuteFunctions,
 	INodeExecutionData,
+	INodeProperties,
 	NodeOperationError,
 	NodeParameterValueType,
 } from 'n8n-workflow';
@@ -68,7 +69,7 @@ export function isAltErrorResponse(response: unknown): response is IAltErrorResp
 	return typeof response === 'object' && response !== null && 'Error' in response && typeof response.Error === 'string';
 }
 
-export function createHandler(context: IExecuteFunctions, resource: string): IOperationHandler {
+export function createHandler(context: IExecuteFunctions, itemIndex: number, resource: string): IOperationHandler {
 	switch (resource) {
 		case Resources.Account:
 			return new AccountHandler();
@@ -83,26 +84,30 @@ export function createHandler(context: IExecuteFunctions, resource: string): IOp
 		case Resources.ActivityData:
 			return new ActivityDataHandler();
 		default:
-			throw new NodeOperationError(context.getNode(), `Unsupported resource '${resource}'`);
+			throw new NodeOperationError(context.getNode(), `Resource ${resource} not supported`, {
+				itemIndex: itemIndex,
+				description: 'Please select a resource from the list',
+			});
 	}
 }
 
 export function getHandler(
 	context: IExecuteFunctions,
+	itemIndex: number,
 	handlers: Map<string, IOperationHandler>,
 	resource: string,
 ): IOperationHandler {
 	let handler = handlers.get(resource);
 
 	if (!handler) {
-		handler = createHandler(context, resource);
+		handler = createHandler(context, itemIndex, resource);
 		handlers.set(resource, handler);
 	}
 
 	return handler;
 }
 
-export function toDate(context: IExecuteFunctions, dateTime: string): string | null {
+export function toDate(context: IExecuteFunctions, i: number, dateTime: string, name: string): string | null {
 	if (isBlank(dateTime)) {
 		return null;
 	}
@@ -110,10 +115,19 @@ export function toDate(context: IExecuteFunctions, dateTime: string): string | n
 	const d = new Date(dateTime);
 
 	if (Number.isNaN(d.valueOf())) {
-		throw new NodeOperationError(context.getNode(), `Invalid date value: ${dateTime}`);
+		throw new NodeOperationError(context.getNode(), `Invalid date value for '${name}': ${dateTime}`, {
+			itemIndex: i,
+			description: `Please enter a value for '${name}' in a valid date format, e.g. YYYY-MM-DD`,
+		});
 	}
 
 	return d.toISOString().split('T')[0]; // → "2025-10-08"
+}
+
+export function getDateParameter(context: IExecuteFunctions, i: number, parameter: INodeProperties) {
+	const stringValue = context.getNodeParameter(parameter.name, i) as string;
+
+	return toDate(context, i, stringValue, parameter.displayName);
 }
 
 export function isBlank(value: string | null | undefined): value is null | undefined | '' {
@@ -167,6 +181,7 @@ export function isEmailFinderEntry(obj: unknown): obj is IEmailFinderEntry {
 		typeof obj.domain === 'string' &&
 		isNotBlank(obj.domain) &&
 		(('first_name' in obj && typeof obj.first_name === 'string' && isNotBlank(obj.first_name)) ||
+			('last_name' in obj && typeof obj.last_name === 'string' && isNotBlank(obj.last_name)) ||
 			('full_name' in obj && typeof obj.full_name === 'string' && isNotBlank(obj.full_name)))
 	);
 }
@@ -209,7 +224,7 @@ function nameOfRequiredValue(mode: Mode): string {
 		case Mode.SCORING:
 			return 'email address';
 		case Mode.EMAIL_FINDER:
-			return 'domain and either a first name or full name';
+			return 'domain and either a first name, last name or full name';
 		case Mode.DOMAIN_SEARCH:
 			return 'domain';
 	}
@@ -248,7 +263,17 @@ function uniqueValue(value: IItemInputEntry, mode: Mode): string {
 			return (value as IEmailEntry).email_address;
 		case Mode.EMAIL_FINDER: {
 			const entry = value as IEmailFinderEntry;
-			return entry.domain + ',' + defaultString(entry.first_name) + ',' + defaultString(entry.full_name);
+			return (
+				entry.domain +
+				',' +
+				defaultString(entry.first_name) +
+				',' +
+				defaultString(entry.last_name) +
+				',' +
+				defaultString(entry.middle_name) +
+				',' +
+				defaultString(entry.full_name)
+			);
 		}
 		case Mode.DOMAIN_SEARCH:
 			return (value as IDomainSearchEntry).domain;
@@ -261,50 +286,55 @@ export function invalidEmailEntry(obj: NodeParameterValueType | object): boolean
 
 export function validateItemInputEntries(
 	context: IExecuteFunctions,
+	itemIndex: number,
 	entries: unknown,
 	mode: Mode,
 ): asserts entries is IItemInputEntry[] {
 	if (!Array.isArray(entries)) {
-		throw new NodeOperationError(
-			context.getNode(),
-			`Invalid entry format. Expected an array of objects like: [${expectedFormat(mode)},${expectedFormat(mode)}...]`,
-		);
+		throw new NodeOperationError(context.getNode(), `Invalid entry format for array type`, {
+			itemIndex: itemIndex,
+			description: `Expected an array of objects containing ${nameOfRequiredValue(mode)} e.g. [${expectedFormat(mode)},${expectedFormat(mode)}...]`,
+		});
 	}
 
 	for (let idx = 0; idx < entries.length; idx++) {
 		const entry = entries[idx];
 		if (!isNative(entry, mode)) {
-			throw new NodeOperationError(
-				context.getNode(),
-				`Invalid entry at position ${idx + 1}: ${JSON.stringify(entry)}. Expected ${expectedFormat(mode)}`,
-			);
+			throw new NodeOperationError(context.getNode(), `Invalid entry at index ${idx}: ${JSON.stringify(entry)}`, {
+				itemIndex: itemIndex,
+				description: `Expected ${nameOfRequiredValue(mode)} e.g. ${expectedFormat(mode)}`,
+			});
 		}
 	}
 
 	if (entries.length === 0) {
-		throw new NodeOperationError(context.getNode(), 'No entries');
+		throw new NodeOperationError(context.getNode(), 'No entries', {
+			itemIndex: itemIndex,
+			description: 'Check values/mapping, no valid entries were found',
+		});
 	}
 }
 
 export function convertAssignments(
 	context: IExecuteFunctions,
+	itemIndex: number,
 	obj: object | NodeParameterValueType,
 	mode: Mode,
 ): IItemInputEntry[] {
 	const assignments: AssignmentValue[] = (obj as AssignmentCollectionValue)?.assignments;
 
 	if (!assignments || !Array.isArray(assignments) || assignments.length == 0) {
-		throw new NodeOperationError(
-			context.getNode(),
-			`Invalid assignment value: Value missing, must include at least one ${nameOfRequiredValue(mode)}.`,
-		);
+		throw new NodeOperationError(context.getNode(), `Invalid assignment value: Value missing`, {
+			itemIndex: itemIndex,
+			description: `Expected value to include at least one ${nameOfRequiredValue(mode)}`,
+		});
 	}
 
 	const entries: IItemInputEntry[] = [];
 
-	for (let i = 0; i < assignments.length; i++) {
-		const assignment = assignments[i];
-		convertAssignmentEntry(context, assignment, i, mode, entries);
+	for (let assignmentIndex = 0; assignmentIndex < assignments.length; assignmentIndex++) {
+		const assignment = assignments[assignmentIndex];
+		convertAssignmentEntry(context, itemIndex, assignment, assignmentIndex, mode, entries);
 	}
 
 	return entries;
@@ -312,16 +342,17 @@ export function convertAssignments(
 
 function convertAssignmentEntry(
 	context: IExecuteFunctions,
+	itemIndex: number,
 	assignmentEntry: AssignmentValue,
 	idx: number,
 	mode: Mode,
 	entries: IItemInputEntry[],
 ) {
 	if (!assignmentEntry.value) {
-		throw new NodeOperationError(
-			context.getNode(),
-			`Invalid assignment value at position ${idx + 1}: Value is missing.`,
-		);
+		throw new NodeOperationError(context.getNode(), `Invalid assignment value at index ${idx}: Value is missing.`, {
+			itemIndex: itemIndex,
+			description: `Ensure there is a value containing ${nameOfRequiredValue(mode)}.`,
+		});
 	}
 
 	const type = defaultString(assignmentEntry.type, 'object');
@@ -332,38 +363,48 @@ function convertAssignmentEntry(
 		case 'string':
 		case 'array':
 		case 'object': {
-			convertValueToEntries(context, name, value, idx, mode, entries);
+			convertValueToEntries(context, itemIndex, name, value, idx, mode, entries);
 			break;
 		}
 		default: {
 			throw new NodeOperationError(
 				context.getNode(),
-				`Invalid assignment value '${name}' at position ${idx + 1}: Type '${type}' not supported.`,
+				`Invalid assignment value '${name}' at index ${idx}: Type '${type}' not supported.`,
+				{
+					itemIndex: itemIndex,
+					description: 'Only string, object and array assignment types are supported',
+				},
 			);
 		}
 	}
 
 	if (entries.length === 0) {
-		throw new NodeOperationError(
-			context.getNode(),
-			`Invalid assignment value '${name}' at position ${idx + 1}: Value must contain at least one ${nameOfRequiredValue(mode)}.`,
-		);
+		throw new NodeOperationError(context.getNode(), `Invalid assignment value '${name}' at index ${idx}`, {
+			itemIndex: itemIndex,
+			description: `Ensure value contains at least one ${nameOfRequiredValue(mode)}`,
+		});
 	}
 }
 
 export function convertValueToEntries(
 	context: IExecuteFunctions,
+	itemIndex: number,
 	name: string,
 	value: unknown,
 	idx: number,
 	mode: Mode,
 	entries: IItemInputEntry[],
 ): void {
+	// Skip missing/empty values
+	if (value === undefined || value === null) {
+		return;
+	}
+
 	// Loop and convert all values in arrays
 	if (Array.isArray(value)) {
 		for (let subIdx = 0; subIdx < value.length; subIdx++) {
 			const subValue = value[subIdx];
-			convertValueToEntries(context, name, subValue, subIdx, mode, entries);
+			convertValueToEntries(context, itemIndex, name, subValue, subIdx, mode, entries);
 		}
 		return;
 	}
@@ -376,26 +417,31 @@ export function convertValueToEntries(
 
 	// If it's a string, check the name and convert
 	if (isString(value)) {
-		convertStringValue(context, value, name, idx, mode, entries);
+		convertStringValue(context, itemIndex, value, name, idx, mode, entries);
 		return;
 	}
 
 	// If it's an object, split into object entries and handle
-	if (typeof value === 'object' && value !== null) {
+	if (typeof value === 'object') {
 		for (const [key, subValue] of Object.entries(value)) {
-			convertValueToEntries(context, key, subValue, idx, mode, entries);
+			convertValueToEntries(context, itemIndex, key, subValue, idx, mode, entries);
 		}
 		return;
 	}
 
 	throw new NodeOperationError(
 		context.getNode(),
-		`Invalid assignment value '${name}' at position ${idx + 1}: Field name is expected to contain ${expectedFields(mode)}`,
+		`Invalid assignment value '${name}' at index ${idx}: Field name is expected to contain ${expectedFields(mode)}`,
+		{
+			itemIndex: itemIndex,
+			description: `Unsupported field name or type, check input values/mappings`,
+		},
 	);
 }
 
 function convertValidationStringValue(
 	context: IExecuteFunctions,
+	itemIndex: number,
 	value: string,
 	name: string,
 	idx: number,
@@ -411,7 +457,11 @@ function convertValidationStringValue(
 		if (entries.length === 0) {
 			throw new NodeOperationError(
 				context.getNode(),
-				`Invalid assignment value '${name}' at position ${idx + 1}: Expected email field before ip field.`,
+				`Invalid assignment value '${name}' at index ${idx}: Expected email field before ip field.`,
+				{
+					itemIndex: itemIndex,
+					description: `Ensure fields are in the correct order, email should be before IP`,
+				},
 			);
 		}
 		// Add the ip_address to the previous IEmailEntry
@@ -419,7 +469,13 @@ function convertValidationStringValue(
 	}
 }
 
-function convertScoringStringValue(value: string, name: string, idx: number, entries: IItemInputEntry[]): void {
+function convertScoringStringValue(
+	value: string,
+	itemIndex: number,
+	name: string,
+	idx: number,
+	entries: IItemInputEntry[],
+): void {
 	// Expect an email address for string values
 	if (name.includes('email')) {
 		entries.push({ email_address: value });
@@ -428,6 +484,7 @@ function convertScoringStringValue(value: string, name: string, idx: number, ent
 
 function convertEmailFinderStringValue(
 	context: IExecuteFunctions,
+	itemIndex: number,
 	value: string,
 	name: string,
 	idx: number,
@@ -446,7 +503,11 @@ function convertEmailFinderStringValue(
 	if (entries.length === 0) {
 		throw new NodeOperationError(
 			context.getNode(),
-			`Invalid assignment value '${name}' at position ${idx + 1}: Expected domain field before name field.`,
+			`Invalid value '${name}' at index ${idx}: Expected domain field before name field.`,
+			{
+				itemIndex: itemIndex,
+				description: 'Ensure fields are in the correct order, domain should be before name fields',
+			},
 		);
 	}
 
@@ -465,7 +526,13 @@ function convertEmailFinderStringValue(
 	}
 }
 
-function convertDomainSearchStringValue(value: string, name: string, idx: number, entries: IItemInputEntry[]): void {
+function convertDomainSearchStringValue(
+	value: string,
+	itemIndex: number,
+	name: string,
+	idx: number,
+	entries: IItemInputEntry[],
+): void {
 	// Expect a domain for string values
 	if (name.includes('domain')) {
 		entries.push({ domain: value });
@@ -474,6 +541,7 @@ function convertDomainSearchStringValue(value: string, name: string, idx: number
 
 function convertStringValue(
 	context: IExecuteFunctions,
+	itemIndex: number,
 	value: string,
 	name: string,
 	idx: number,
@@ -482,19 +550,19 @@ function convertStringValue(
 ): void {
 	switch (mode) {
 		case Mode.VALIDATION:
-			convertValidationStringValue(context, value, name, idx, entries);
+			convertValidationStringValue(context, itemIndex, value, name, idx, entries);
 			return;
 
 		case Mode.SCORING:
-			convertScoringStringValue(value, name, idx, entries);
+			convertScoringStringValue(value, itemIndex, name, idx, entries);
 			return;
 
 		case Mode.EMAIL_FINDER:
-			convertEmailFinderStringValue(context, value, name, idx, entries);
+			convertEmailFinderStringValue(context, itemIndex, value, name, idx, entries);
 			return;
 
 		case Mode.DOMAIN_SEARCH:
-			convertDomainSearchStringValue(value, name, idx, entries);
+			convertDomainSearchStringValue(value, itemIndex, name, idx, entries);
 			return;
 	}
 }
@@ -503,9 +571,19 @@ function isString(value: unknown): value is string {
 	return typeof value === 'string';
 }
 
-function convertJson(context: IExecuteFunctions, json: unknown, mode: Mode): IItemInputEntry[] {
+function convertJson(context: IExecuteFunctions, itemIndex: number, json: unknown, mode: Mode): IItemInputEntry[] {
 	if (!isString(json) || isBlank(json)) {
-		throw new NodeOperationError(context.getNode(), 'Invalid JSON value');
+		throw new NodeOperationError(context.getNode(), 'Invalid JSON value', {
+			itemIndex: itemIndex,
+			description:
+				'Enter a valid JSON value e.g.' +
+				'{\n' +
+				'  "emails": [\n' +
+				'    "valid@example.com",\n' +
+				'    "invalid@example.com"\n' +
+				'  ]\n' +
+				'}',
+		});
 	}
 
 	let value;
@@ -516,14 +594,19 @@ function convertJson(context: IExecuteFunctions, json: unknown, mode: Mode): IIt
 		throw new NodeOperationError(
 			context.getNode(),
 			`Failed to parse ${nameOfRequiredValue(mode)} JSON: ` + (err as Error).message,
+			{
+				itemIndex: itemIndex,
+				description: err.description,
+			},
 		);
 	}
 
-	return convertToEntries(context, value, mode, ItemInputOptions.JSON);
+	return convertToEntries(context, itemIndex, value, mode, ItemInputOptions.JSON);
 }
 
 function convertToEntries(
 	context: IExecuteFunctions,
+	itemIndex: number,
 	value: unknown,
 	mode: Mode,
 	itemInputType: ItemInputOptions,
@@ -543,13 +626,13 @@ function convertToEntries(
 
 	const entries: IItemInputEntry[] = [];
 
-	convertValueToEntries(context, name, value, 0, mode, entries);
+	convertValueToEntries(context, itemIndex, name, value, 0, mode, entries);
 
 	if (entries.length === 0) {
-		throw new NodeOperationError(
-			context.getNode(),
-			`Invalid ${itemInputType.toLowerCase()} value: Value must contain at least one ${nameOfRequiredValue(mode)}`,
-		);
+		throw new NodeOperationError(context.getNode(), `Invalid ${itemInputType.toLowerCase()} value`, {
+			itemIndex: itemIndex,
+			description: `Value must contain at least one ${nameOfRequiredValue(mode)}`,
+		});
 	}
 
 	return entries;
@@ -560,39 +643,42 @@ function convertToEntries(
  * Validates structure and data integrity.
  *
  * @param context - n8n execution context
- * @param i - Item index
+ * @param itemIndex - Item index
  * @param mode - Validate or Scoring
  * @throws NodeOperationError if the data format is invalid
  */
-export function convertItemInput(context: IExecuteFunctions, i: number, mode: Mode): IItemInputEntry[] {
-	const itemInputType = context.getNodeParameter(ItemInputType.name, i) as ItemInputOptions;
+export function convertItemInput(context: IExecuteFunctions, itemIndex: number, mode: Mode): IItemInputEntry[] {
+	const itemInputType = context.getNodeParameter(ItemInputType.name, itemIndex) as ItemInputOptions;
 
 	let entries: IItemInputEntry[];
 
 	switch (itemInputType) {
 		case ItemInputOptions.ASSIGNMENT: {
-			const value = context.getNodeParameter(ItemInputAssignment.name, i);
-			entries = convertAssignments(context, value, mode);
+			const value = context.getNodeParameter(ItemInputAssignment.name, itemIndex);
+			entries = convertAssignments(context, itemIndex, value, mode);
 			break;
 		}
 
 		case ItemInputOptions.JSON: {
-			const value = context.getNodeParameter(ItemInputJson.name, i);
-			entries = convertJson(context, value, mode);
+			const value = context.getNodeParameter(ItemInputJson.name, itemIndex);
+			entries = convertJson(context, itemIndex, value, mode);
 			break;
 		}
 
 		case ItemInputOptions.MAPPED: {
-			const mapped = context.getNodeParameter(ItemInputMapped.name, i) as IMappedValues;
-			entries = convertToEntries(context, mapped.mappedValues, mode, itemInputType);
+			const mapped = context.getNodeParameter(ItemInputMapped.name, itemIndex) as IMappedValues;
+			entries = convertToEntries(context, itemIndex, mapped.mappedValues, mode, itemInputType);
 			break;
 		}
 
 		default:
-			throw new NodeOperationError(context.getNode(), `Unsupported email batch type '${itemInputType}'`);
+			throw new NodeOperationError(context.getNode(), `Unsupported item input type '${itemInputType}'`, {
+				itemIndex: itemIndex,
+				description: `Please select an '${ItemInputType.displayName}' from the list`,
+			});
 	}
 
-	validateItemInputEntries(context, entries, mode);
+	validateItemInputEntries(context, itemIndex, entries, mode);
 
 	return entries;
 }
@@ -620,10 +706,10 @@ export function getBinaryData(context: IExecuteFunctions, i: number, binaryKey: 
 	const binaryInput = inputData.find((item) => item?.binary !== undefined);
 
 	if (!binaryInput) {
-		throw new NodeOperationError(
-			context.getNode(),
-			'No binary input found. Make sure the previous node outputs a binary CSV file.',
-		);
+		throw new NodeOperationError(context.getNode(), 'No binary input found', {
+			itemIndex: i,
+			description: 'The previous node needs to output a binary CSV file',
+		});
 	}
 
 	return context.helpers.assertBinaryData(i, binaryKey);
@@ -670,10 +756,10 @@ export function getFileId(context: IExecuteFunctions, i: number): string {
 			detail = ' (too short)';
 		}
 
-		throw new NodeOperationError(
-			context.getNode(),
-			`Invalid File ID '${fileId}'${detail}. Expected UUID format e.g. '9f559670-0202-46e9-ab65-7aa1917f12ca'`,
-		);
+		throw new NodeOperationError(context.getNode(), `Invalid File ID '${fileId}'${detail}`, {
+			itemIndex: i,
+			description: "Please enter File ID in the expected UUID format e.g. '9f559670-0202-46e9-ab65-7aa1917f12ca'",
+		});
 	}
 	return fileId;
 }
@@ -681,10 +767,10 @@ export function getFileId(context: IExecuteFunctions, i: number): string {
 export function getNumberParameter(
 	context: IExecuteFunctions,
 	i: number,
-	name: string,
+	parameter: INodeProperties,
 	defaultValue?: number,
 ): number | undefined {
-	const value = context.getNodeParameter(name, i, undefined);
+	const value = context.getNodeParameter(parameter.name, i, undefined);
 
 	if (value === null || value === undefined || value === '') {
 		return defaultValue;
@@ -699,7 +785,11 @@ export function getNumberParameter(
 	if (numberValue === null || numberValue === undefined || Number.isNaN(numberValue)) {
 		throw new NodeOperationError(
 			context.getNode(),
-			`Invalid value '${JSON.stringify(value)}' for number parameter '${name}'`,
+			`Invalid value '${JSON.stringify(value)}' for number parameter '${parameter.displayName}'`,
+			{
+				itemIndex: i,
+				description: `Check value entered for '${parameter.name}'`,
+			}
 		);
 	}
 
@@ -723,7 +813,11 @@ export async function convertEntriesToCsv(
 	if (!combineItems && inputItems > 50) {
 		throw new NodeOperationError(
 			context.getNode(),
-			`Exceeded maximum number of files (50). Enable '${CombineItems.displayName}' to combine inputs into a single file.`,
+			`Exceeded maximum number of files (50)`,
+			{
+				itemIndex: i,
+				description: `Enable '${CombineItems.displayName}' to combine inputs into a single file`,
+			}
 		);
 	}
 

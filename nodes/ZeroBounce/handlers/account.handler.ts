@@ -1,12 +1,12 @@
 import { IRequestParams, zbGetRequest, zbPostRequest } from '../utils/request.utils';
 import {
+	getDateParameter,
 	getNumberParameter,
 	IAltErrorResponse,
 	IErrorResponse,
 	IOperationHandler,
 	isAltErrorResponse,
 	isErrorResponse,
-	toDate,
 } from '../utils/handler.utils';
 import { IDataObject, IExecuteFunctions, INodeExecutionData, NodeOperationError } from 'n8n-workflow';
 import { BaseUrl, Endpoint, Operations } from '../enums';
@@ -81,7 +81,7 @@ interface IDeleteFilterResponse extends IDataObject {
  */
 async function getCredits(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
 	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
-	const creditsRequired = getNumberParameter(context, i, CreditsRequired.name, 0);
+	const creditsRequired = getNumberParameter(context, i, CreditsRequired, 0);
 
 	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.GetCredits);
 	const response = fullResponse.body as IGetCreditsResponse | IErrorResponse;
@@ -127,13 +127,11 @@ async function getCredits(context: IExecuteFunctions, i: number): Promise<INodeE
  * Dates are normalized to ISO yyyy-mm-dd.
  */
 async function getApiUsage(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const startDate = context.getNodeParameter(StartDate.name, i) as string;
-	const endDate = context.getNodeParameter(EndDate.name, i) as string;
 	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
 
 	const request = {
-		start_date: toDate(context, startDate),
-		end_date: toDate(context, endDate),
+		start_date: getDateParameter(context, i, StartDate),
+		end_date: getDateParameter(context, i, EndDate),
 	} as IGetApiUsageRequest;
 
 	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.GetApiUsage, request);
@@ -225,7 +223,10 @@ class AccountHandler implements IOperationHandler {
 			case Operations.AccountDeleteFilter:
 				return addOrDeleteFilter(context, i, AddOrDelete.DELETE);
 			default:
-				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`);
+				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`, {
+					itemIndex: i,
+					description: 'Please select an operation from the list',
+				});
 		}
 	}
 }
