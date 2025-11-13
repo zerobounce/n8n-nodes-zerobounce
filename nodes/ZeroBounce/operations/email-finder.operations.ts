@@ -90,13 +90,14 @@ const PartialNameFields: INodeProperties[] = [
 					{
 						...FirstName,
 						name: 'first_name',
-						required: true,
 						description: 'The first name of the person whose email format is being searched.',
+						hint: 'Required if last name is not set',
 					},
 					{
 						...LastName,
 						name: 'last_name',
 						description: 'The last name of the person whose email format is being searched.',
+						hint: 'Required if first name is not set',
 					},
 					{
 						...MiddleName,
@@ -157,7 +158,7 @@ const ItemInputFields: INodeProperties[] = [
 const SendFileFields: INodeProperties[] = [
 	{
 		...FileName,
-		placeholder: 'n8n_email_finder.csv',
+		placeholder: 'e.g. n8n_email_finder.csv',
 	},
 	SendFileInputType,
 	...BinaryFileFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
@@ -173,7 +174,7 @@ const GetFileFields: INodeProperties[] = [
 	FileId,
 	{
 		...FileName,
-		placeholder: 'n8n_email_finder_results.csv',
+		placeholder: 'e.g. n8n_email_finder_results.csv',
 	},
 	GetFileOutputType,
 	...[Batch, IncludeFile].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),

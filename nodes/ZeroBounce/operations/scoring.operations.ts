@@ -73,7 +73,7 @@ const BinaryFileFields: INodeProperties[] = [
 const SendFileFields: INodeProperties[] = [
 	{
 		...FileName,
-		placeholder: 'n8n_scoring.csv',
+		placeholder: 'e.g. n8n_scoring.csv',
 	},
 	RemoveDuplicates,
 	ReturnUrl,
@@ -94,10 +94,10 @@ const GetFileFields: INodeProperties[] = [
 	},
 	{
 		...FileName,
-		placeholder: 'n8n_scoring_results.csv',
+		placeholder: 'e.g. n8n_scoring_results.csv',
 	},
 	GetFileOutputType,
-	...[Batch].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
+	...[Batch, IncludeFile].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.Scoring],

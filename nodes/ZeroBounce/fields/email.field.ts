@@ -8,6 +8,6 @@ export const Email: INodeProperties = {
 	type: 'string',
 	required: true,
 	default: '',
-	placeholder: 'name@email.com',
+	placeholder: 'e.g. name@email.com',
 	description: 'The email address you want to validate',
 };

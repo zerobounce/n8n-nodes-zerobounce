@@ -7,7 +7,7 @@ export const EmailColumnNumber: INodeProperties = {
 	name: Fields.EmailColumnNumber,
 	type: 'number',
 	default: 1,
-	placeholder: '1',
+	placeholder: 'e.g. 1',
 	required: true,
 	typeOptions: {
 		minValue: 1,

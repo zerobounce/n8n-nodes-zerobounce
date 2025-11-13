@@ -46,7 +46,7 @@ export const FirstNameColumnNumber: INodeProperties = {
 	name: Fields.EmailFinderColumnsFirstName,
 	type: 'number',
 	default: 2,
-	placeholder: '2',
+	placeholder: 'e.g. 2',
 	required: true,
 	typeOptions: {
 		minValue: 1,
@@ -65,7 +65,7 @@ export const LastNameColumnNumber: INodeProperties = {
 	name: Fields.EmailFinderColumnsLastName,
 	type: 'number',
 	default: null,
-	placeholder: '3',
+	placeholder: 'e.g. 3',
 	typeOptions: {
 		minValue: 1,
 		maxValue: 99,
@@ -83,7 +83,7 @@ export const MiddleNameColumnNumber: INodeProperties = {
 	name: Fields.EmailFinderColumnsMiddleName,
 	type: 'number',
 	default: null,
-	placeholder: '4',
+	placeholder: 'e.g. 4',
 	typeOptions: {
 		minValue: 1,
 		maxValue: 99,
@@ -101,7 +101,7 @@ export const FullNameColumnNumber: INodeProperties = {
 	name: Fields.EmailFinderColumnsFullName,
 	type: 'number',
 	default: 2,
-	placeholder: '2',
+	placeholder: 'e.g. 2',
 	required: true,
 	typeOptions: {
 		minValue: 1,

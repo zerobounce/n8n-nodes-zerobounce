@@ -7,6 +7,6 @@ export const IpAddress: INodeProperties = {
 	name: Fields.IpAddress,
 	type: 'string',
 	default: '',
-	placeholder: '99.110.204.1',
+	placeholder: 'e.g. 99.110.204.1',
 	description: 'The IP Address the email signed up from. Leave empty if not required.',
 };

@@ -7,7 +7,6 @@ export const IncludeFile: INodeProperties = {
 	name: Fields.IncludeFile,
 	type: 'boolean',
 	default: false,
-	placeholder: 'false',
 	noDataExpression: true,
 	description: 'Whether the file is included in the output as binary',
 };

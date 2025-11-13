@@ -7,7 +7,7 @@ export const FileId: INodeProperties = {
 	name: Fields.FileId,
 	type: 'string',
 	default: '={{ $json.file_id }}',
-	placeholder: '9f559670-0202-46e9-ab65-7aa1917f12ca',
+	placeholder: 'e.g. 9f559670-0202-46e9-ab65-7aa1917f12ca',
 	required: true,
 	description: 'The ID which was returned was returned when submitting a file for validation',
 };

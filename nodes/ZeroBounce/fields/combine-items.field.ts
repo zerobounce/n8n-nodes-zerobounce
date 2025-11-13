@@ -7,7 +7,6 @@ export const CombineItems: INodeProperties = {
 	name: Fields.CombineItems,
 	type: 'boolean',
 	default: true,
-	placeholder: 'true',
 	noDataExpression: true,
 	description: 'Whether the input items are combined into a single file',
 };

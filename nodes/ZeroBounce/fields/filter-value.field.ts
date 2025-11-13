@@ -8,6 +8,6 @@ export const FilterValue: INodeProperties = {
 	type: 'string',
 	required: true,
 	default: '',
-	placeholder: 'test@example.com',
+	placeholder: 'e.g. test@example.com',
 	description: 'The email address, email domain, mx record or tld you wish to filter, based on the selected target',
 };

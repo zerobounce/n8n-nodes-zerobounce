@@ -7,7 +7,7 @@ export const IpAddressColumnNumber: INodeProperties = {
 	name: Fields.IpAddressColumnNumber,
 	type: 'number',
 	default: null,
-	placeholder: '2',
+	placeholder: 'e.g. 2',
 	typeOptions: {
 		minValue: 1,
 		maxValue: 99,

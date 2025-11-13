@@ -7,6 +7,6 @@ export const ReturnUrl: INodeProperties = {
 	name: Fields.ReturnUrl,
 	type: 'string',
 	default: '={{$execution.resumeUrl}}/zerobounce',
-	placeholder: '={{$execution.resumeUrl}}/zerobounce',
+	placeholder: 'e.g. {{$execution.resumeUrl}}/zerobounce',
 	description: 'The public Webhook URL ZeroBounce will call when file validation is complete (Optional)',
 };

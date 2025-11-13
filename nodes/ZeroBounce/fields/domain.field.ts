@@ -8,6 +8,6 @@ export const Domain: INodeProperties = {
 	type: 'string',
 	required: true,
 	default: '',
-	placeholder: 'example.com',
+	placeholder: 'e.g. example.com',
 	description: 'The email domain for which to find the email format',
 };

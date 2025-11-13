@@ -7,7 +7,7 @@ export const BinaryKey: INodeProperties = {
 	name: Fields.BinaryKey,
 	type: 'string',
 	default: 'data',
-	placeholder: 'data',
+	placeholder: 'e.g. data',
 	required: true,
 	description: "The key which identifies which binary data to send as a file, usually 'data'",
 };

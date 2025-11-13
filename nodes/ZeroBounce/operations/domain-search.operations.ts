@@ -72,7 +72,7 @@ const ItemInputFields: INodeProperties[] = [
 const SendFileFields: INodeProperties[] = [
 	{
 		...FileName,
-		placeholder: 'n8n_domain_search.csv',
+		placeholder: 'e.g. n8n_domain_search.csv',
 	},
 	SendFileInputType,
 	...BinaryFileFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
@@ -88,7 +88,7 @@ const GetFileFields: INodeProperties[] = [
 	FileId,
 	{
 		...FileName,
-		placeholder: 'n8n_domain_search_results.csv',
+		placeholder: 'e.g. n8n_domain_search_results.csv',
 	},
 	GetFileOutputType,
 	...[Batch, IncludeFile].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),

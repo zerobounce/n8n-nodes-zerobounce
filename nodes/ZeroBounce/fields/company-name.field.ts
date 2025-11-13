@@ -8,6 +8,6 @@ export const CompanyName: INodeProperties = {
 	type: 'string',
 	required: true,
 	default: '',
-	placeholder: 'Example Company LLC',
+	placeholder: 'e.g. Example Company LLC',
 	description: 'The company name for which to find the email format',
 };
