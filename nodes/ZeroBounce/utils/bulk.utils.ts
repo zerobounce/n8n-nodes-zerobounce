@@ -109,6 +109,17 @@ export interface IGetFileRequest extends IRequestParams {
 	activityData?: boolean;
 }
 
+export interface IGetFileResponse extends IDataObject {
+	file_id: string,
+	file_name?: string,
+	remote_file_name: string,
+	file_size: number,
+	activity_data?: boolean,
+	result_number?: number,
+	total_results?: number,
+	results?: IDataObject[],
+}
+
 export interface IDeleteFileRequest extends IRequestParams {
 	file_id: string;
 }
@@ -149,25 +160,25 @@ function sendFileFileInputRequest(context: IExecuteFunctions, i: number, mode: M
 		case Mode.VALIDATION:
 		case Mode.SCORING:
 			return {
-				email_address_column: getNumberParameter(context, i, EmailColumnNumber.name, 1) as number,
+				email_address_column: getNumberParameter(context, i, EmailColumnNumber, 1) as number,
 				remove_duplicate: context.getNodeParameter(RemoveDuplicates.name, i) as boolean,
 				return_url: context.getNodeParameter(ReturnUrl.name, i) as string,
 				ip_address_column:
-					mode === Mode.VALIDATION ? getNumberParameter(context, i, IpAddressColumnNumber.name, 2) : undefined,
+					mode === Mode.VALIDATION ? getNumberParameter(context, i, IpAddressColumnNumber, 2) : undefined,
 			} as ISendFileValidationOrScoringRequest;
 
 		case Mode.EMAIL_FINDER:
 		case Mode.DOMAIN_SEARCH:
 			return {
-				domain_column: getNumberParameter(context, i, DomainColumnNumber.name, 1) as number,
+				domain_column: getNumberParameter(context, i, DomainColumnNumber, 1) as number,
 				first_name_column:
-					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, FirstNameColumnNumber.name) : undefined,
+					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, FirstNameColumnNumber) : undefined,
 				last_name_column:
-					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, LastNameColumnNumber.name) : undefined,
+					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, LastNameColumnNumber) : undefined,
 				middle_name_column:
-					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, MiddleNameColumnNumber.name) : undefined,
+					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, MiddleNameColumnNumber) : undefined,
 				full_name_column:
-					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, FullNameColumnNumber.name) : undefined,
+					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, FullNameColumnNumber) : undefined,
 			} as ISendFileEmailFinderOrDomainSearchRequest;
 	}
 }
@@ -484,16 +495,18 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 		binary = { data: binaryData };
 	}
 
+	const json: IGetFileResponse = {
+		file_id: fileId,
+		file_name: binaryData.fileName,
+		remote_file_name: remoteFilename,
+		file_size: headers['content-length'] as number ?? 0,
+		activity_data: request.activityData,
+		result_number: undefined,
+		total_results: undefined,
+	};
+
 	const output: INodeExecutionData = {
-		json: {
-			file_id: fileId,
-			file_name: binaryData.fileName,
-			remote_file_name: remoteFilename,
-			file_size: headers['content-length'],
-			activity_data: request.activityData,
-			item_number: undefined,
-			total_items: undefined,
-		},
+		json: json,
 		binary: binary,
 		pairedItem: i,
 	};
@@ -508,8 +521,8 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 			const results = await convertFileToFields(binaryData);
 
 			if (batch) {
-				output.json.total_items = results.length;
-				output.json.results = results;
+				json.total_results = results.length;
+				json.results = results;
 
 				// Return a single result containing the entire results batch
 				return [output];
@@ -520,10 +533,10 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 						({
 							...output,
 							json: {
-								...output.json,
-								item_number: index + 1,
-								total_items: results.length,
-								result: result,
+								...json,
+								result_number: index + 1,
+								total_results: results.length,
+								...result,
 							},
 							binary: index > 0 ? undefined : binary,
 						}) as INodeExecutionData,
