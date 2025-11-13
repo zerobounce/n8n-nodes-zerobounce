@@ -11,20 +11,17 @@ This is an n8n community node for integrating with the ZeroBounce API in your n8
 * [Operations](#operations)
 * [Credentials](#credentials)
 * [Usage](#usage)
+* [Support](#support)
 * [Compatibility](#compatibility)
 * [Resources](#resources)
 
 ## About
 
-[ZeroBounce](https://www.zerobounce.net) is an award-winning email verification and deliverability platform helping more than 185,000 customers land their emails in the inbox.
+[ZeroBounce](https://www.zerobounce.net) is an award-winning email verification and deliverability platform trusted by more than 185,000 customers.
 
-The service removes email typos, nonexistent and abuse email accounts, spam traps and other risky email addresses. ZeroBounce’s email deliverability toolkit further supports the safe inbox delivery of transactional and marketing emails. The company operates a military-grade security infrastructure. It is GDPR and SOC 2 Type 2 compliant and ensures the highest levels of data protection.
+It detects invalid, abuse, spam trap other risky email addresses to improve inbox placement.
 
-ZeroBounce has validated more than 13 billion emails. Some of the companies it serves are Amazon, Disney, Netflix, LinkedIn and Sephora.
-
-In 2019, ZeroBounce took no. 851 on the Inc. 5000 list of the fastest-growing private companies in the United States. One year later, ZeroBounce rose to no. 40 on the list. In 2021, ZeroBounce was number 9 on the Inc. 5000 Regionals list of the fastest-growing companies in
-Florida, and in 2022, it was no. 1,954 on the national Inc. 5000 list. In 2022, ZeroBounce founded Email Day (April 23), now an international holiday honoring
-email inventor Ray Tomlinson.
+The company is GDPR and SOC 2 Type 2 compliant, validating over 13 billion emails to date. Some of the companies it serves are Amazon, Disney, Netflix, LinkedIn and Sephora.
 
 ## Installation
 
@@ -44,17 +41,17 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
   - Validate Email
   - Validate Batch
   - Bulk Validate Send File
-  -	Bulk Validate Get File
-  -	Bulk Validate File Status
-  -	Bulk Validate Delete File
+  - Bulk Validate Get File
+  - Bulk Validate File Status
+  - Bulk Validate Delete File
 
 
 - A.I. Scoring
   - Score Email
   - Bulk A.I. Scoring Send File
-  -	Bulk A.I. Scoring Get File
-  -	Bulk A.I. Scoring File Status
-  -	Bulk A.I. Scoring Delete File
+  - Bulk A.I. Scoring Get File
+  - Bulk A.I. Scoring File Status
+  - Bulk A.I. Scoring Delete File
 
 
 - Email Finder
@@ -96,15 +93,18 @@ For more information, see [API Keys Management](https://www.zerobounce.net/docs/
 
 When testing your workflows, use [API Sandbox Mode](https://www.zerobounce.net/docs/email-validation-api-quickstart/#sandbox_mode__v2__) data.
 
-### Send File
- #### Wait Webhook
+### Send File Wait Webhook
   - Use a [Wait node](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.wait/#on-webhook-call) to wait for a webhook confirming completion of a file
-  - Use Resume mode 'On Webhook Call'
+  - Set the resume mode to 'On Webhook Call'
   - Set the HTTP Method to 'POST'
   - Optional: Add a webhook suffix with the options dropdown e.g. `zerobounce`
   - Set the 'return_url' parameter in the Send File node to the webhook URL e.g. `{{$execution.resumeUrl}}/zerobounce`
   - On execution, the URL is generated and the 'Wait' node will wait until the notification is received from ZeroBounce
   - If the webhook is never called, check the HTTP Method on the wait node is set to 'POST' and view the status of the callback here [API Callback Status](https://www.zerobounce.net/members/API/status)
+
+## Support
+
+If you encounter an issue with this node, please [Contact Us](https://www.zerobounce.net/contact-us/).
 
 ## Compatibility
 
