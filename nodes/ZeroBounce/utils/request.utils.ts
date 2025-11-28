@@ -18,26 +18,6 @@ export interface IRequestBody {
 }
 
 /**
- * Converts a FormData or URLSearchParams instance into a plain object suitable for safe logging.
- * File values are replaced with metadata (name, type, size).
- */
-function extractFormDataSummary(formData: FormData | URLSearchParams): IDataObject {
-	const values: IDataObject = {};
-	for (const [key, value] of formData.entries()) {
-		if (value instanceof File) {
-			values[key] = {
-				filename: value.name,
-				type: value.type,
-				size: value.size,
-			};
-		} else {
-			values[key] = value;
-		}
-	}
-	return values;
-}
-
-/**
  * Sends an authenticated request to the ZeroBounce API with standardized logging.
  * Handles both JSON and FormData payloads.
  */
@@ -54,11 +34,9 @@ export async function zbRequest(
 	requestOptions.returnFullResponse = true;
 
 	const method = (requestOptions.method ?? 'GET').toUpperCase();
-	const logMessage = `ZeroBounce Request: ${requestOptions.method} ${requestOptions.baseURL}${requestOptions.url}`;
 
 	switch (method) {
 		case 'GET':
-			context.logger.debug(`${logMessage} queryParams='${JSON.stringify(requestOptions.qs ?? {})}'`);
 			break;
 
 		case 'POST':
@@ -67,16 +45,6 @@ export async function zbRequest(
 					context.getNode(),
 					'Either a body or formData must be provided for a POST request.',
 				);
-			}
-
-			if (requestOptions.body instanceof FormData) {
-				const formData = extractFormDataSummary(requestOptions.body);
-				context.logger.debug(`${logMessage} formData='${JSON.stringify(formData)}'`);
-			} else if (requestOptions.body instanceof URLSearchParams) {
-				const urlSearchParams = extractFormDataSummary(requestOptions.body);
-				context.logger.debug(`${logMessage} urlSearchParams='${JSON.stringify(urlSearchParams)}'`);
-			} else {
-				context.logger.debug(`${logMessage} body='${JSON.stringify(requestOptions.body ?? {})}'`);
 			}
 			break;
 

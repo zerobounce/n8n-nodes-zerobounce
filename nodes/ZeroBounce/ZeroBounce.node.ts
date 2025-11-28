@@ -33,10 +33,6 @@ export class ZeroBounce implements INodeType {
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
 		usableAsTool: true,
-		codex: {
-			categories: ['Data Validation', 'Email Verification'],
-			subcategories: { 'Data Validation': ['Email'] },
-		},
 		documentationUrl: 'https://www.zerobounce.net/docs/',
 		credentials: [
 			{
@@ -44,12 +40,6 @@ export class ZeroBounce implements INodeType {
 				required: true,
 			},
 		],
-		requestDefaults: {
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-			},
-		},
 		properties: [
 			// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 			{
