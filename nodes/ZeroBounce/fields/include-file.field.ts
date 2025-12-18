@@ -8,5 +8,5 @@ export const IncludeFile: INodeProperties = {
 	type: 'boolean',
 	default: false,
 	noDataExpression: true,
-	description: 'Whether the file is included in the output as binary',
+	description: 'Whether the file is included in the output as binary in addition to the fields',
 };

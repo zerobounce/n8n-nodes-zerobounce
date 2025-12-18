@@ -13,12 +13,12 @@ import { ReturnUrl } from '../fields/return-url.field';
 import { SendFileInputFieldType, SendFileInputType } from '../fields/send-file-input-type.field';
 import { FileId } from '../fields/file-id.field';
 import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-output-type.field';
-import { Batch } from '../fields/batch.field';
+import { SplitItems } from '../fields/split-items.field';
 import { ItemInputAssignment, ItemInputJson, ItemInputMapped, ItemInputType } from '../fields/item-input.field';
 import { IncludeFile } from '../fields/include-file.field';
+import { AddOptions } from '../fields/add-options.field';
 
 const ScoreFields: INodeProperties[] = [
-	// prettier-ignore
 	ApiEndpoint,
 	{
 		...Email,
@@ -32,8 +32,6 @@ const ScoreFields: INodeProperties[] = [
 );
 
 const ItemInputFields: INodeProperties[] = [
-	CombineItems,
-	IncludeFile,
 	ItemInputType,
 	{
 		...ItemInputAssignment,
@@ -63,23 +61,32 @@ const ItemInputFields: INodeProperties[] = [
 	},
 ];
 
-const BinaryFileFields: INodeProperties[] = [
-	// prettier-ignore
-	BinaryKey,
-	HasHeader,
-	EmailColumnNumber,
-];
-
-const SendFileFields: INodeProperties[] = [
+const SendFileCommonOptionFields: INodeProperties[] = [
 	{
 		...FileName,
 		placeholder: 'e.g. n8n_scoring.csv',
 	},
 	RemoveDuplicates,
 	ReturnUrl,
+];
+
+const SendFileFields: INodeProperties[] = [
 	SendFileInputType,
-	...BinaryFileFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
-	...ItemInputFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
+	...[
+		BinaryKey,
+		EmailColumnNumber,
+		{
+			...AddOptions,
+			options: [...SendFileCommonOptionFields, HasHeader],
+		},
+	].map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
+	...[
+		...ItemInputFields,
+		{
+			...AddOptions,
+			options: [...SendFileCommonOptionFields, CombineItems, IncludeFile],
+		},
+	].map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.Scoring],
@@ -87,17 +94,31 @@ const SendFileFields: INodeProperties[] = [
 	}),
 );
 
+const GetFileCommonOptionFields: INodeProperties[] = [
+	{
+		...FileName,
+		placeholder: 'e.g. n8n_scoring_results.csv',
+	},
+];
+
 const GetFileFields: INodeProperties[] = [
 	{
 		...FileId,
 		default: '={{ $json.body.file_id }}',
 	},
-	{
-		...FileName,
-		placeholder: 'e.g. n8n_scoring_results.csv',
-	},
 	GetFileOutputType,
-	...[Batch, IncludeFile].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
+	...[
+		{
+			...AddOptions,
+			options: [...GetFileCommonOptionFields],
+		},
+	].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FILE] })),
+	...[
+		{
+			...AddOptions,
+			options: [...GetFileCommonOptionFields, SplitItems, IncludeFile],
+		},
+	].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.Scoring],

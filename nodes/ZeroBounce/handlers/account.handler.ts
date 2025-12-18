@@ -1,7 +1,6 @@
 import { IRequestParams, zbGetRequest, zbPostRequest } from '../utils/request.utils';
 import {
 	getDateParameter,
-	getNumberParameter,
 	IAltErrorResponse,
 	IErrorResponse,
 	IOperationHandler,
@@ -13,10 +12,10 @@ import { BaseUrl, Endpoint, Operations } from '../enums';
 import { ApiEndpoint } from '../fields/api-endpoint.field';
 import { StartDate } from '../fields/start-date.field';
 import { EndDate } from '../fields/end-date.field';
-import { CreditsRequired } from '../fields/credits-required.field';
 import { FilterRule, Rule } from '../fields/filter-rule.field';
 import { FilterTarget, Target } from '../fields/filter-target.field';
 import { FilterValue } from '../fields/filter-value.field';
+import { AddOptions } from '../fields/add-options.field';
 
 interface IGetCreditsResponse extends IDataObject {
 	Credits: number | string;
@@ -81,7 +80,9 @@ interface IDeleteFilterResponse extends IDataObject {
  */
 async function getCredits(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
 	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
-	const creditsRequired = getNumberParameter(context, i, CreditsRequired, 0);
+
+	const options = context.getNodeParameter(AddOptions.name, i, {}) as { creditsRequired?: number };
+	const creditsRequired = options.creditsRequired;
 
 	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.GetCredits);
 	const response = fullResponse.body as IGetCreditsResponse | IErrorResponse;

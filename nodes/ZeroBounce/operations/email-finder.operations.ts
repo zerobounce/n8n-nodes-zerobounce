@@ -14,7 +14,7 @@ import { HasHeader } from '../fields/has-header.field';
 import { CombineItems } from '../fields/combine-items.field';
 import { FileId } from '../fields/file-id.field';
 import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-output-type.field';
-import { Batch } from '../fields/batch.field';
+import { SplitItems } from '../fields/split-items.field';
 import { DomainColumnNumber } from '../fields/domain-column.field';
 import { ItemInputAssignment, ItemInputJson, ItemInputMapped, ItemInputType } from '../fields/item-input.field';
 import { FullName } from '../fields/full-name.field';
@@ -29,6 +29,7 @@ import {
 	NameTypeOptions,
 } from '../fields/email-finder.field';
 import { IncludeFile } from '../fields/include-file.field';
+import { AddOptions } from '../fields/add-options.field';
 
 const FindFields: INodeProperties[] = [
 	ApiEndpoint,
@@ -37,15 +38,13 @@ const FindFields: INodeProperties[] = [
 	...[CompanyName].map(addDisplayOptions({ [FindBy.name]: [FindByType.COMPANY_NAME] })),
 	{
 		...FirstName,
-		description:
-			'(Conditional) The first name of the person whose email format is being searched',
+		description: '(Conditional) The first name of the person whose email format is being searched',
 		hint: 'Required if last name is not set',
 	},
 	MiddleName,
 	{
 		...LastName,
-		description:
-			'(Conditional) The last name of the person whose email format is being searched',
+		description: '(Conditional) The last name of the person whose email format is being searched',
 		hint: 'Required if first name is not set',
 	},
 ].map(
@@ -54,18 +53,6 @@ const FindFields: INodeProperties[] = [
 		operation: [Operations.EmailFinderFind],
 	}),
 );
-
-const BinaryFileFields: INodeProperties[] = [
-	// prettier-ignore
-	BinaryKey,
-	HasHeader,
-	NameType,
-	DomainColumnNumber,
-	FirstNameColumnNumber,
-	LastNameColumnNumber,
-	MiddleNameColumnNumber,
-	FullNameColumnNumber,
-];
 
 const PartialNameFields: INodeProperties[] = [
 	{
@@ -143,9 +130,6 @@ const FullNameFields: INodeProperties[] = [
 ].map(addDisplayOptions({ [NameType.name]: [NameTypeOptions.FULL] }));
 
 const ItemInputFields: INodeProperties[] = [
-	CombineItems,
-	IncludeFile,
-	NameType,
 	ItemInputType,
 	{
 		...ItemInputAssignment,
@@ -155,14 +139,35 @@ const ItemInputFields: INodeProperties[] = [
 	...FullNameFields,
 ];
 
-const SendFileFields: INodeProperties[] = [
+const SendFileCommonOptionFields: INodeProperties[] = [
 	{
 		...FileName,
 		placeholder: 'e.g. n8n_email_finder.csv',
 	},
+];
+
+const SendFileFields: INodeProperties[] = [
 	SendFileInputType,
-	...BinaryFileFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
-	...ItemInputFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
+	NameType,
+	...[
+		BinaryKey,
+		DomainColumnNumber,
+		FirstNameColumnNumber,
+		LastNameColumnNumber,
+		MiddleNameColumnNumber,
+		FullNameColumnNumber,
+		{
+			...AddOptions,
+			options: [...SendFileCommonOptionFields, HasHeader],
+		},
+	].map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
+	...[
+		...ItemInputFields,
+		{
+			...AddOptions,
+			options: [...SendFileCommonOptionFields, CombineItems, IncludeFile],
+		},
+	].map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.EmailFinder],
@@ -170,14 +175,28 @@ const SendFileFields: INodeProperties[] = [
 	}),
 );
 
-const GetFileFields: INodeProperties[] = [
-	FileId,
+const GetFileCommonOptionFields: INodeProperties[] = [
 	{
 		...FileName,
 		placeholder: 'e.g. n8n_email_finder_results.csv',
 	},
+];
+
+const GetFileFields: INodeProperties[] = [
+	FileId,
 	GetFileOutputType,
-	...[Batch, IncludeFile].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
+	...[
+		{
+			...AddOptions,
+			options: [...GetFileCommonOptionFields],
+		},
+	].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FILE] })),
+	...[
+		{
+			...AddOptions,
+			options: [...GetFileCommonOptionFields, SplitItems, IncludeFile],
+		},
+	].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.EmailFinder],

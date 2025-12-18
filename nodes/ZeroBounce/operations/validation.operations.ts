@@ -1,8 +1,5 @@
-import { Timeout } from '../fields/timeout.field';
 import { ActivityData } from '../fields/activity-data.field';
-import { VerifyPlus } from '../fields/verify-plus.field';
 import { Email } from '../fields/email.field';
-import { ApiEndpoint } from '../fields/api-endpoint.field';
 import { IpAddress } from '../fields/ip-address.field';
 import { addDisplayOptions, combineItemsHint, documentationHint, multipleInputItemsHint } from '../utils/field.utils';
 import { Documentation, Fields, Operations, Resources } from '../enums';
@@ -18,18 +15,27 @@ import { ReturnUrl } from '../fields/return-url.field';
 import { SendFileInputFieldType, SendFileInputType } from '../fields/send-file-input-type.field';
 import { FileId } from '../fields/file-id.field';
 import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-output-type.field';
-import { Batch } from '../fields/batch.field';
+import { SplitItems } from '../fields/split-items.field';
 import { ItemInputAssignment, ItemInputJson, ItemInputMapped, ItemInputType } from '../fields/item-input.field';
 import { IncludeFile } from '../fields/include-file.field';
+import { Timeout } from '../fields/timeout.field';
+import { VerifyPlus } from '../fields/verify-plus.field';
+import { ApiEndpoint } from '../fields/api-endpoint.field';
+import { AddOptions } from '../fields/add-options.field';
 
 const ValidateFields: INodeProperties[] = [
-	// prettier-ignore
 	ApiEndpoint,
-	Timeout,
-	ActivityData,
-	VerifyPlus,
 	Email,
-	IpAddress,
+	{
+		...AddOptions,
+		options: [
+			// prettier-ignore
+			IpAddress,
+			Timeout,
+			ActivityData,
+			VerifyPlus,
+		],
+	},
 ].map(
 	addDisplayOptions({
 		resource: [Resources.Validation],
@@ -37,7 +43,7 @@ const ValidateFields: INodeProperties[] = [
 	}),
 );
 
-const ValidateItemInputFields: INodeProperties[] = [
+const ItemInputFields: INodeProperties[] = [
 	ItemInputType,
 	{
 		...ItemInputAssignment,
@@ -64,38 +70,50 @@ const ValidateItemInputFields: INodeProperties[] = [
 	},
 ];
 
-const BatchValidateFields: INodeProperties[] = [Timeout, ActivityData, VerifyPlus, ...ValidateItemInputFields].map(
+const BatchValidateFields: INodeProperties[] = [
+	{
+		...AddOptions,
+		options: [
+			// prettier-ignore
+			Timeout,
+			ActivityData,
+			VerifyPlus,
+		],
+	} as INodeProperties,
+	...ItemInputFields,
+].map(
 	addDisplayOptions({
 		resource: [Resources.Validation],
 		operation: [Operations.ValidationBatchValidate],
 	}),
 );
 
-const ItemInputFields: INodeProperties[] = [
-	// prettier-ignore
-	CombineItems,
-	IncludeFile,
-	...ValidateItemInputFields,
-];
-
-const BinaryFileFields: INodeProperties[] = [
-	// prettier-ignore
-	BinaryKey,
-	HasHeader,
-	EmailColumnNumber,
-	IpAddressColumnNumber,
-];
-
-const SendFileFields: INodeProperties[] = [
+const SendFileCommonOptionFields: INodeProperties[] = [
 	{
 		...FileName,
 		placeholder: 'e.g. n8n_validation.csv',
 	},
 	RemoveDuplicates,
 	ReturnUrl,
+];
+
+const SendFileFields: INodeProperties[] = [
 	SendFileInputType,
-	...BinaryFileFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
-	...ItemInputFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
+	...[
+		BinaryKey,
+		EmailColumnNumber,
+		{
+			...AddOptions,
+			options: [...SendFileCommonOptionFields, HasHeader, IpAddressColumnNumber],
+		},
+	].map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
+	...[
+		...ItemInputFields,
+		{
+			...AddOptions,
+			options: [...SendFileCommonOptionFields, CombineItems, IncludeFile],
+		},
+	].map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.Validation],
@@ -103,18 +121,32 @@ const SendFileFields: INodeProperties[] = [
 	}),
 );
 
-const GetFileFields: INodeProperties[] = [
-	{
-		...FileId,
-		default: '={{ $json.body.file_id }}',
-	},
+const GetFileCommonOptionFields: INodeProperties[] = [
 	ActivityData,
 	{
 		...FileName,
 		placeholder: 'e.g. n8n_validation_results.csv',
 	},
+];
+
+const GetFileFields: INodeProperties[] = [
+	{
+		...FileId,
+		default: '={{ $json.body.file_id }}',
+	},
 	GetFileOutputType,
-	...[Batch, IncludeFile].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
+	...[
+		{
+			...AddOptions,
+			options: [...GetFileCommonOptionFields],
+		},
+	].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FILE] })),
+	...[
+		{
+			...AddOptions,
+			options: [...GetFileCommonOptionFields, SplitItems, IncludeFile],
+		},
+	].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.Validation],

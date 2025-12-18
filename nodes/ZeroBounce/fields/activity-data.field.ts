@@ -3,7 +3,7 @@ import type { INodeProperties } from 'n8n-workflow';
 import { Fields } from '../enums';
 
 export const ActivityData: INodeProperties = {
-	displayName: 'Activity Data',
+	displayName: 'Include Activity Data',
 	name: Fields.ActivityData,
 	type: 'boolean',
 	default: false,

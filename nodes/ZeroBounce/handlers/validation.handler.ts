@@ -1,7 +1,6 @@
 import { IDataObject, IExecuteFunctions, INodeExecutionData, NodeOperationError } from 'n8n-workflow';
 import {
 	convertItemInput,
-	getNumberParameter,
 	IEmailEntry,
 	IErrorResponse,
 	IOperationHandler,
@@ -10,12 +9,9 @@ import {
 import { IRequestBody, IRequestParams, zbGetRequest, zbPostRequest } from '../utils/request.utils';
 import { BaseUrl, BulkEndpoint, Endpoint, Mode, Operations } from '../enums';
 import { Email } from '../fields/email.field';
-import { Timeout } from '../fields/timeout.field';
-import { ActivityData } from '../fields/activity-data.field';
-import { VerifyPlus } from '../fields/verify-plus.field';
-import { IpAddress } from '../fields/ip-address.field';
-import { ApiEndpoint } from '../fields/api-endpoint.field';
 import { deleteFile, fileStatus, getFile, sendFile } from '../utils/bulk.utils';
+import { ApiEndpoint } from '../fields/api-endpoint.field';
+import { AddOptions } from '../fields/add-options.field';
 
 interface IValidateBase {
 	timeout?: number; // The duration (3 - 60 seconds) allowed for the validation. If met, the API will return unknown / greylisted. (optional parameter)
@@ -106,19 +102,22 @@ interface IValidateBatchResult extends IDataObject {
  * - Handles all request construction and response parsing internally.
  */
 async function validate(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const timeout = getNumberParameter(context, i, Timeout);
-	const activityData = context.getNodeParameter(ActivityData.name, i, false, { ensureType: 'boolean' }) as boolean;
-	const verifyPlus = context.getNodeParameter(VerifyPlus.name, i, false, { ensureType: 'boolean' }) as boolean;
-	const email = context.getNodeParameter(Email.name, i) as string;
-	const ipAddress = context.getNodeParameter(IpAddress.name, i) as string;
 	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
+	const email = context.getNodeParameter(Email.name, i) as string;
+
+	const options = context.getNodeParameter(AddOptions.name, i, {}) as {
+		ipAddress?: string;
+		timeout?: number;
+		activityData?: boolean;
+		verifyPlus?: boolean;
+	};
 
 	const request: IValidateRequest = {
 		email: email,
-		ip_address: ipAddress,
-		timeout: timeout ?? undefined,
-		activity_data: activityData,
-		verify_plus: verifyPlus,
+		ip_address: options.ipAddress ?? '',
+		timeout: options.timeout ?? undefined,
+		activity_data: options.activityData,
+		verify_plus: options.verifyPlus,
 	};
 
 	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.Validate, request);
@@ -174,9 +173,6 @@ async function validate(context: IExecuteFunctions, i: number): Promise<INodeExe
  * - The function wraps the ZeroBounce response in an n8n `INodeExecutionData` structure for workflow compatibility.
  */
 async function batchValidate(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const timeout = getNumberParameter(context, i, Timeout);
-	const activityData = context.getNodeParameter(ActivityData.name, i, false, { ensureType: 'boolean' }) as boolean;
-	const verifyPlus = context.getNodeParameter(VerifyPlus.name, i, false, { ensureType: 'boolean' }) as boolean;
 	const emailBatch = convertItemInput(context, i, Mode.VALIDATION) as IEmailEntry[];
 
 	if (emailBatch.length > 200) {
@@ -186,11 +182,17 @@ async function batchValidate(context: IExecuteFunctions, i: number): Promise<INo
 		);
 	}
 
+	const options = context.getNodeParameter(AddOptions.name, i, {}) as {
+		timeout?: number;
+		activityData?: boolean;
+		verifyPlus?: boolean;
+	};
+
 	const request: IValidateBatchRequest = {
 		email_batch: emailBatch,
-		timeout: timeout ?? undefined,
-		activity_data: activityData,
-		verify_plus: verifyPlus,
+		timeout: options.timeout ?? undefined,
+		activity_data: options.activityData,
+		verify_plus: options.verifyPlus,
 	};
 
 	const fullResponse = await zbPostRequest(context, BaseUrl.BULK_V2, BulkEndpoint.ValidateBatch, request);

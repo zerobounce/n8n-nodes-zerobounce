@@ -17,6 +17,8 @@ This is an n8n community node for integrating with the ZeroBounce API in your n8
 
 ## About
 
+Validate and score email addresses to improve deliverability and protect domain reputation.
+
 [ZeroBounce](https://www.zerobounce.net) is an award-winning email verification and deliverability platform trusted by more than 185,000 customers.
 
 It detects invalid, abuse, spam trap other risky email addresses to improve inbox placement.

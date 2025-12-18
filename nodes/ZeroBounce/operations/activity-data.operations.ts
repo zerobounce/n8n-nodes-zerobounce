@@ -6,7 +6,6 @@ import { ApiEndpoint } from '../fields/api-endpoint.field';
 import { Email } from '../fields/email.field';
 
 const ActivityDataFields: INodeProperties[] = [
-	// prettier-ignore
 	ApiEndpoint,
 	{
 		...Email,

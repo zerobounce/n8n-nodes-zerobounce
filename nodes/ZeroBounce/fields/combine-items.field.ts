@@ -8,5 +8,5 @@ export const CombineItems: INodeProperties = {
 	type: 'boolean',
 	default: true,
 	noDataExpression: true,
-	description: 'Whether the input items are combined into a single file',
+	description: 'Whether the input items are combined into a single file or handled as separate executions',
 };

@@ -9,11 +9,14 @@ import { FilterTarget } from '../fields/filter-target.field';
 import { FilterValue } from '../fields/filter-value.field';
 import { DelayNotice } from '../fields/delay-notice.field';
 import { INodeProperties, NodeHint } from 'n8n-workflow';
+import { AddOptions } from '../fields/add-options.field';
 
 const GetCreditsFields: INodeProperties[] = [
-	// prettier-ignore
 	ApiEndpoint,
-	CreditsRequired,
+	{
+		...AddOptions,
+		options: [CreditsRequired],
+	},
 ].map(
 	addDisplayOptions({
 		resource: [Resources.Account],
@@ -44,8 +47,8 @@ const ListFiltersFields: INodeProperties[] = [
 );
 
 const AddOrDeleteFilterFields: INodeProperties[] = [
-	DelayNotice,
 	ApiEndpoint,
+	DelayNotice,
 	FilterRule,
 	FilterTarget,
 	FilterValue,

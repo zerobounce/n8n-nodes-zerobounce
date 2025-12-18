@@ -54,10 +54,10 @@ export enum Operations {
 }
 
 export enum Fields {
+	AddOptions = 'addOptions',
 	ApiKey = 'apiKey',
 	ActivityData = 'activityData',
 	ApiEndpoint = 'apiEndpoint',
-	Batch = 'batch',
 	BinaryKey = 'binaryKey',
 	CombineItems = 'combineItems',
 	CompanyName = 'companyName',
@@ -96,6 +96,7 @@ export enum Fields {
 	RemoveDuplicates = 'removeDuplicates',
 	ReturnUrl = 'returnUrl',
 	SendFileInputType = 'sendFileInputType',
+	SplitItems = 'splitItems',
 	StartDate = 'startDate',
 	Timeout = 'timeout',
 	VerifyPlus = 'verifyPlus',

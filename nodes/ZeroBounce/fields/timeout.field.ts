@@ -6,8 +6,8 @@ export const Timeout: INodeProperties = {
 	displayName: 'Timeout (Seconds)',
 	name: Fields.Timeout,
 	type: 'number',
-	default: null,
+	default: 10,
 	placeholder: 'e.g. 10',
 	description:
-		'The duration (3 - 60 seconds) allowed for the validation. If exceeded, the API will return unknown / greylisted. Leave empty if not required.',
+		'The duration (3 - 60 seconds) allowed for the validation. If exceeded, the API will return unknown / greylisted.',
 };

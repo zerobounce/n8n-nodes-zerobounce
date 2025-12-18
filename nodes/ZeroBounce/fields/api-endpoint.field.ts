@@ -6,7 +6,6 @@ export const ApiEndpoint: INodeProperties = {
 	displayName: 'API Endpoint',
 	name: Fields.ApiEndpoint,
 	type: 'options',
-	required: true,
 	noDataExpression: true,
 	allowArbitraryValues: false,
 	description: 'The API endpoint to send the request to',

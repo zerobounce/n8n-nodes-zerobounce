@@ -21,15 +21,9 @@ import {
 } from './handler.utils';
 import { BaseUrl, BulkEndpoint, Mode } from '../enums';
 import { SendFileInputFieldType, SendFileInputType } from '../fields/send-file-input-type.field';
-import { FileName } from '../fields/file-name.field';
 import { BinaryKey } from '../fields/binary-key.field';
-import { HasHeader } from '../fields/has-header.field';
-import { ActivityData } from '../fields/activity-data.field';
 import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-output-type.field';
-import { Batch } from '../fields/batch.field';
-import { CombineItems } from '../fields/combine-items.field';
 import { EmailColumnNumber } from '../fields/email-address-column.field';
-import { RemoveDuplicates } from '../fields/remove-duplicates.field';
 import { DomainColumnNumber } from '../fields/domain-column.field';
 import {
 	FirstNameColumnNumber,
@@ -39,9 +33,7 @@ import {
 	NameType,
 	NameTypeOptions,
 } from '../fields/email-finder.field';
-import { IpAddressColumnNumber } from '../fields/ip-address-column.field';
-import { ReturnUrl } from '../fields/return-url.field';
-import { IncludeFile } from '../fields/include-file.field';
+import { AddOptions } from '../fields/add-options.field';
 
 export interface IBulkErrorResponse extends IDataObject {
 	success: boolean;
@@ -70,6 +62,16 @@ interface ISendFileEmailFinderOrDomainSearchRequest extends ISendFileBaseRequest
 	last_name_column?: number; // The column index of the last name column. (Optional)
 	middle_name_column?: number; // The column index of the middle name column. (Optional)
 	full_name_column?: number; // The column index of the full name column. (Either one of the first name column or the full name column is mandatory)
+}
+
+interface ISendFileOptions {
+	fileName?: string;
+	removeDuplicates?: boolean;
+	returnUrl?: string;
+	hasHeader?: boolean;
+	ipAddressColumnNumber?: number;
+	combineItems?: boolean;
+	includeFile?: boolean;
 }
 
 interface ISendFileDetails {
@@ -104,20 +106,27 @@ export interface IFileStatusResponse extends IDataObject {
 	return_url: string; // "Your return URL if provided when calling sendfile API"
 }
 
+interface IGetFileOptions {
+	activityData?: boolean;
+	fileName?: string;
+	splitItems?: boolean;
+	includeFile?: boolean;
+}
+
 export interface IGetFileRequest extends IRequestParams {
 	file_id: string;
-	activityData?: boolean;
+	activity_data?: boolean;
 }
 
 export interface IGetFileResponse extends IDataObject {
-	file_id: string,
-	file_name?: string,
-	remote_file_name: string,
-	file_size: number,
-	activity_data?: boolean,
-	result_number?: number,
-	total_results?: number,
-	results?: IDataObject[],
+	file_id: string;
+	file_name?: string;
+	remote_file_name: string;
+	file_size: number;
+	activity_data?: boolean;
+	result_number?: number;
+	total_results?: number;
+	results?: IDataObject[];
 }
 
 export interface IDeleteFileRequest extends IRequestParams {
@@ -155,16 +164,15 @@ function sendFileEndpoint(mode: Mode): BulkEndpoint {
 	}
 }
 
-function sendFileFileInputRequest(context: IExecuteFunctions, i: number, mode: Mode) {
+function sendFileFileInputRequest(context: IExecuteFunctions, i: number, mode: Mode, options: ISendFileOptions) {
 	switch (mode) {
 		case Mode.VALIDATION:
 		case Mode.SCORING:
 			return {
 				email_address_column: getNumberParameter(context, i, EmailColumnNumber, 1) as number,
-				remove_duplicate: context.getNodeParameter(RemoveDuplicates.name, i) as boolean,
-				return_url: context.getNodeParameter(ReturnUrl.name, i) as string,
-				ip_address_column:
-					mode === Mode.VALIDATION ? getNumberParameter(context, i, IpAddressColumnNumber, 2) : undefined,
+				remove_duplicate: options.removeDuplicates ?? true,
+				return_url: options.returnUrl,
+				ip_address_column: mode === Mode.VALIDATION ? options.ipAddressColumnNumber : undefined,
 			} as ISendFileValidationOrScoringRequest;
 
 		case Mode.EMAIL_FINDER:
@@ -173,23 +181,21 @@ function sendFileFileInputRequest(context: IExecuteFunctions, i: number, mode: M
 				domain_column: getNumberParameter(context, i, DomainColumnNumber, 1) as number,
 				first_name_column:
 					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, FirstNameColumnNumber) : undefined,
-				last_name_column:
-					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, LastNameColumnNumber) : undefined,
+				last_name_column: mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, LastNameColumnNumber) : undefined,
 				middle_name_column:
 					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, MiddleNameColumnNumber) : undefined,
-				full_name_column:
-					mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, FullNameColumnNumber) : undefined,
+				full_name_column: mode === Mode.EMAIL_FINDER ? getNumberParameter(context, i, FullNameColumnNumber) : undefined,
 			} as ISendFileEmailFinderOrDomainSearchRequest;
 	}
 }
 
-function sendFileItemsInputRequest(context: IExecuteFunctions, i: number, mode: Mode) {
+function sendFileItemsInputRequest(context: IExecuteFunctions, i: number, mode: Mode, options: ISendFileOptions) {
 	switch (mode) {
 		case Mode.VALIDATION:
 		case Mode.SCORING:
 			return {
-				remove_duplicate: context.getNodeParameter(RemoveDuplicates.name, i) as boolean,
-				return_url: context.getNodeParameter(ReturnUrl.name, i) as string,
+				remove_duplicate: options.removeDuplicates ?? true,
+				return_url: options.returnUrl,
 				email_address_column: 1,
 				ip_address_column: mode === Mode.VALIDATION ? 2 : undefined,
 			} as ISendFileValidationOrScoringRequest;
@@ -219,38 +225,38 @@ async function sendFileDetails(
 	i: number,
 	mode: Mode,
 	inputType: SendFileInputFieldType,
-	fileName?: string,
+	options: ISendFileOptions,
 ): Promise<ISendFileDetails | null> {
 	const details = {} as ISendFileDetails;
 
 	details.endpoint = sendFileEndpoint(mode);
 
 	if (inputType === SendFileInputFieldType.FILE) {
-		details.request = sendFileFileInputRequest(context, i, mode);
+		details.request = sendFileFileInputRequest(context, i, mode, options);
 
 		const binaryKey = context.getNodeParameter(BinaryKey.name, i) as string;
 		details.binaryData = getBinaryData(context, i, binaryKey);
 		details.buffer = await context.helpers.getBinaryDataBuffer(i, binaryKey);
-		details.request.has_header_row = context.getNodeParameter(HasHeader.name, i) as boolean;
+		details.request.has_header_row = options.hasHeader ?? true;
 
-		if (isNotBlank(fileName)) {
-			details.binaryData.fileName = fileName;
+		if (isNotBlank(options.fileName)) {
+			details.binaryData.fileName = options.fileName;
 		}
 	} else {
-		details.combineItems = context.getNodeParameter(CombineItems.name, i, true, { ensureType: 'boolean' }) as boolean;
+		details.combineItems = options.combineItems ?? true;
 
 		// Only process the first execution if combine items is enabled
 		if (details.combineItems && i > 0) {
 			return null;
 		}
 
-		details.request = sendFileItemsInputRequest(context, i, mode);
+		details.request = sendFileItemsInputRequest(context, i, mode, options);
 
 		const csvOutput: CsvOutput = await convertEntriesToCsv(context, i, details.combineItems, mode);
 
 		details.binaryData = await context.helpers.prepareBinaryData(
 			Buffer.from(csvOutput.contents, 'utf8'),
-			defaultString(fileName, `n8n_${mode}.csv`),
+			defaultString(options.fileName, `n8n_${mode}.csv`),
 			'text/csv',
 		);
 		details.buffer = csvOutput.contents;
@@ -315,9 +321,9 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 		throw new NodeOperationError(context.getNode(), 'Please select input type');
 	}
 
-	let fileName: string | undefined = context.getNodeParameter(FileName.name, i) as string | undefined;
+	const options = context.getNodeParameter(AddOptions.name, i, {}) as ISendFileOptions;
 
-	const details: ISendFileDetails | null = await sendFileDetails(context, i, mode, inputType, fileName);
+	const details: ISendFileDetails | null = await sendFileDetails(context, i, mode, inputType, options);
 
 	// If combine items is enabled and this isn't the first item, null is returned
 	if (details === null) {
@@ -325,7 +331,7 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 	}
 
 	// Get the filename to use from the binary data if not overridden
-	fileName = defaultString(fileName, details?.binaryData?.fileName);
+	const fileName = defaultString(options.fileName, details?.binaryData?.fileName);
 
 	const blob = new Blob([details.buffer], { type: 'text/csv' });
 
@@ -353,7 +359,7 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 	response.item_count = details.itemCount;
 
 	const binary =
-		inputType === SendFileInputFieldType.ITEMS && context.getNodeParameter(IncludeFile.name, i)
+		inputType === SendFileInputFieldType.ITEMS && (options.includeFile ?? false)
 			? { data: details.binaryData }
 			: undefined;
 
@@ -442,15 +448,18 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
  */
 export async function getFile(context: IExecuteFunctions, i: number, mode: Mode): Promise<INodeExecutionData[]> {
 	const fileId = getFileId(context, i);
+	const options = context.getNodeParameter(AddOptions.name, i, {}) as IGetFileOptions;
+
 	const request: IGetFileRequest = {
 		file_id: fileId,
 	};
+
 	let endpoint: BulkEndpoint;
 
 	switch (mode) {
 		case Mode.VALIDATION:
 			endpoint = BulkEndpoint.GetFile;
-			request.activityData = context.getNodeParameter(ActivityData.name, i) as boolean;
+			request.activity_data = options.activityData ?? false;
 			break;
 		case Mode.SCORING:
 			endpoint = BulkEndpoint.ScoringGetFile;
@@ -475,7 +484,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 	}
 
 	const remoteFilename = getFileNameFromHeader(headers, fileId);
-	const fileName = defaultString(context.getNodeParameter(FileName.name, i) as string, remoteFilename);
+	const fileName = defaultString(options.fileName, remoteFilename);
 
 	if (!isBinary(response)) {
 		throw new NodeOperationError(context.getNode(), `Invalid response body: ${JSON.stringify(response)}`);
@@ -491,7 +500,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 
 	let binary: IBinaryKeyData | undefined = undefined;
 
-	if (outputType === GetFileOutputFieldType.FILE || context.getNodeParameter(IncludeFile.name, i)) {
+	if (outputType === GetFileOutputFieldType.FILE || (options.includeFile ?? false)) {
 		binary = { data: binaryData };
 	}
 
@@ -499,8 +508,8 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 		file_id: fileId,
 		file_name: binaryData.fileName,
 		remote_file_name: remoteFilename,
-		file_size: headers['content-length'] as number ?? 0,
-		activity_data: request.activityData,
+		file_size: (headers['content-length'] as number) ?? 0,
+		activity_data: request.activity_data,
 		result_number: undefined,
 		total_results: undefined,
 	};
@@ -517,16 +526,9 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 		}
 
 		case GetFileOutputFieldType.FIELDS: {
-			const batch = context.getNodeParameter(Batch.name, i) as boolean;
-			const results = await convertFileToFields(binaryData);
+			const results = await convertFileToFields(context, i, binaryData);
 
-			if (batch) {
-				json.total_results = results.length;
-				json.results = results;
-
-				// Return a single result containing the entire results batch
-				return [output];
-			} else {
+			if (options.splitItems ?? true) {
 				// Return a result for each line in the file
 				return results.map(
 					(result, index) =>
@@ -541,6 +543,12 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 							binary: index > 0 ? undefined : binary,
 						}) as INodeExecutionData,
 				);
+			} else {
+				json.total_results = results.length;
+				json.results = results;
+
+				// Return a single result containing the entire results batch
+				return [output];
 			}
 		}
 	}

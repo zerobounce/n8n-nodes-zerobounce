@@ -11,11 +11,12 @@ import { HasHeader } from '../fields/has-header.field';
 import { CombineItems } from '../fields/combine-items.field';
 import { FileId } from '../fields/file-id.field';
 import { GetFileOutputFieldType, GetFileOutputType } from '../fields/get-file-output-type.field';
-import { Batch } from '../fields/batch.field';
+import { SplitItems } from '../fields/split-items.field';
 import { DomainColumnNumber } from '../fields/domain-column.field';
 import { ItemInputAssignment, ItemInputJson, ItemInputMapped, ItemInputType } from '../fields/item-input.field';
 import { FindBy, FindByType } from '../fields/email-finder.field';
 import { IncludeFile } from '../fields/include-file.field';
+import { AddOptions } from '../fields/add-options.field';
 
 const FindFields: INodeProperties[] = [
 	ApiEndpoint,
@@ -29,16 +30,7 @@ const FindFields: INodeProperties[] = [
 	}),
 );
 
-const BinaryFileFields: INodeProperties[] = [
-	// prettier-ignore
-	BinaryKey,
-	HasHeader,
-	DomainColumnNumber,
-];
-
 const ItemInputFields: INodeProperties[] = [
-	CombineItems,
-	IncludeFile,
 	ItemInputType,
 	{
 		...ItemInputAssignment,
@@ -69,14 +61,30 @@ const ItemInputFields: INodeProperties[] = [
 	},
 ];
 
-const SendFileFields: INodeProperties[] = [
+const SendFileCommonOptionFields: INodeProperties[] = [
 	{
 		...FileName,
 		placeholder: 'e.g. n8n_domain_search.csv',
 	},
+];
+
+const SendFileFields: INodeProperties[] = [
 	SendFileInputType,
-	...BinaryFileFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
-	...ItemInputFields.map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
+	...[
+		BinaryKey,
+		DomainColumnNumber,
+		{
+			...AddOptions,
+			options: [...SendFileCommonOptionFields, HasHeader],
+		},
+	].map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.FILE] })),
+	...[
+		...ItemInputFields,
+		{
+			...AddOptions,
+			options: [...SendFileCommonOptionFields, CombineItems, IncludeFile],
+		},
+	].map(addDisplayOptions({ [Fields.SendFileInputType]: [SendFileInputFieldType.ITEMS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.DomainSearch],
@@ -84,14 +92,28 @@ const SendFileFields: INodeProperties[] = [
 	}),
 );
 
-const GetFileFields: INodeProperties[] = [
-	FileId,
+const GetFileCommonOptionFields: INodeProperties[] = [
 	{
 		...FileName,
 		placeholder: 'e.g. n8n_domain_search_results.csv',
 	},
+];
+
+const GetFileFields: INodeProperties[] = [
+	FileId,
 	GetFileOutputType,
-	...[Batch, IncludeFile].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
+	...[
+		{
+			...AddOptions,
+			options: [...GetFileCommonOptionFields],
+		},
+	].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FILE] })),
+	...[
+		{
+			...AddOptions,
+			options: [...GetFileCommonOptionFields, SplitItems, IncludeFile],
+		},
+	].map(addDisplayOptions({ [Fields.GetFileOutputType]: [GetFileOutputFieldType.FIELDS] })),
 ].map(
 	addDisplayOptions({
 		resource: [Resources.DomainSearch],

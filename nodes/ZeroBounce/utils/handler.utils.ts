@@ -886,8 +886,14 @@ export async function convertEntriesToCsv(
 	};
 }
 
-export async function convertFileToFields(binaryData: IBinaryData): Promise<IStringFields[]> {
-	let lines: string[] = Buffer.from(binaryData.data, 'base64').toString('utf8').trim().split(/\r?\n/);
+export async function convertFileToFields(
+	context: IExecuteFunctions,
+	i: number,
+	binaryData: IBinaryData,
+): Promise<IStringFields[]> {
+	const buffer = await context.helpers.getBinaryDataBuffer(i, binaryData);
+
+	let lines: string[] = buffer.toString('utf8').trim().split(/\r?\n/);
 
 	const header: string[] = splitLine(lines[0]);
 

@@ -8,5 +8,5 @@ export const CreditsRequired: INodeProperties = {
 	type: 'number',
 	default: null,
 	description: 'Number of credits to check the account has as a minimum',
-	hint: '(Optional) Checks there are enough credits for this run. Returns an error if there are fewer credits on the account than required.',
+	hint: 'Checks there are enough credits for this run. Returns an error if there are fewer credits on the account than required.',
 };

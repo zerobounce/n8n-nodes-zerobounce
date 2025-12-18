@@ -16,8 +16,8 @@ interface IScoreResult extends IDataObject {
 }
 
 async function score(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const email = context.getNodeParameter(Email.name, i) as string;
 	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
+	const email = context.getNodeParameter(Email.name, i) as string;
 
 	const request: IScoreRequest = {
 		email: email,
