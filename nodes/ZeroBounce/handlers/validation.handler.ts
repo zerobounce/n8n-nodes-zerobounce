@@ -3,8 +3,10 @@ import {
 	convertItemInput,
 	IEmailEntry,
 	IErrorResponse,
+	IItemInputEntry,
 	IOperationHandler,
 	isErrorResponse,
+	uniqueValue,
 } from '../utils/handler.utils';
 import { IRequestBody, IRequestParams, zbGetRequest, zbPostRequest } from '../utils/request.utils';
 import { BaseUrl, BulkEndpoint, Endpoint, Mode, Operations } from '../enums';
@@ -12,6 +14,8 @@ import { Email } from '../fields/email.field';
 import { deleteFile, fileStatus, getFile, sendFile } from '../utils/bulk.utils';
 import { ApiEndpoint } from '../fields/api-endpoint.field';
 import { AddOptions } from '../fields/add-options.field';
+import { CombineItems } from '../fields/combine-items.field';
+import { SplitItems } from '../fields/split-items.field';
 
 interface IValidateBase {
 	timeout?: number; // The duration (3 - 60 seconds) allowed for the validation. If met, the API will return unknown / greylisted. (optional parameter)
@@ -173,12 +177,45 @@ async function validate(context: IExecuteFunctions, i: number): Promise<INodeExe
  * - The function wraps the ZeroBounce response in an n8n `INodeExecutionData` structure for workflow compatibility.
  */
 async function batchValidate(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const emailBatch = convertItemInput(context, i, Mode.VALIDATION) as IEmailEntry[];
+	const combineItems = context.getNodeParameter(CombineItems.name, i, true);
 
-	if (emailBatch.length > 200) {
+	// Only process the first execution if combine items is enabled
+	if (combineItems && i > 0) {
+		return [];
+	}
+
+	const splitItems = context.getNodeParameter(SplitItems.name, i, true);
+	const inputItems = context.getInputData().length;
+
+	if (!combineItems && inputItems > 5) {
+		throw new NodeOperationError(context.getNode(), `Exceeded maximum number of batches (5)`, {
+			itemIndex: i,
+			description: `Enable '${CombineItems.displayName}' to combine inputs into batches of 200 to avoid rate limiting`,
+		});
+	}
+
+	const entries: IItemInputEntry[] = [];
+
+	if (combineItems && inputItems > 1) {
+		const uniqueEntries: Map<string, IItemInputEntry> = new Map();
+
+		// Get data from all input items and combine them into a single batch
+		for (let item = 0; item < inputItems; item++) {
+			const itemEntries = convertItemInput(context, item, Mode.VALIDATION);
+			for (const entry of itemEntries) {
+				uniqueEntries.set(uniqueValue(entry, Mode.VALIDATION), entry);
+			}
+		}
+		entries.push(...uniqueEntries.values());
+	} else {
+		// Only get the data for the current inputItem
+		entries.push(...convertItemInput(context, i, Mode.VALIDATION));
+	}
+
+	if (entries.length > 200) {
 		throw new NodeOperationError(
 			context.getNode(),
-			'ZeroBounce API allows a maximum of 200 email entries per request.',
+			'ZeroBounce API allows a maximum of 200 email entries per batch request.',
 		);
 	}
 
@@ -189,7 +226,7 @@ async function batchValidate(context: IExecuteFunctions, i: number): Promise<INo
 	};
 
 	const request: IValidateBatchRequest = {
-		email_batch: emailBatch,
+		email_batch: entries as IEmailEntry[],
 		timeout: options.timeout ?? undefined,
 		activity_data: options.activityData,
 		verify_plus: options.verifyPlus,
@@ -197,18 +234,28 @@ async function batchValidate(context: IExecuteFunctions, i: number): Promise<INo
 
 	const fullResponse = await zbPostRequest(context, BaseUrl.BULK_V2, BulkEndpoint.ValidateBatch, request);
 	const response = fullResponse.body as IValidateBatchResult;
-	const errors = response.errors;
+	const emailBatch = response.email_batch ?? [];
+	const errors = response.errors ?? [];
 
 	if (Array.isArray(errors) && errors.length > 0 && errors[0].email_address === 'All') {
 		throw new NodeOperationError(context.getNode(), 'Validation failed: ' + JSON.stringify(response.errors));
 	}
 
-	return [
-		{
-			json: response,
-			pairedItem: i,
-		} as INodeExecutionData,
-	] as INodeExecutionData[];
+	if (splitItems ?? true) {
+		const results = emailBatch.map((result) => ({ json: { ...result } }) as INodeExecutionData);
+		const errorResults = errors.map((result) => ({ json: { ...result } }) as INodeExecutionData);
+
+		// Return a result for validation result or error
+		return [...results, ...errorResults];
+	} else {
+		// Return a single result containing the entire results batch
+		return [
+			{
+				json: response,
+				pairedItem: i,
+			} as INodeExecutionData,
+		] as INodeExecutionData[];
+	}
 }
 
 export class ValidationHandler implements IOperationHandler {

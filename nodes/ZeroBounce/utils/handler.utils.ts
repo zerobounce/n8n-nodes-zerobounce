@@ -256,7 +256,7 @@ function expectedFields(mode: Mode): string {
 	}
 }
 
-function uniqueValue(value: IItemInputEntry, mode: Mode): string {
+export function uniqueValue(value: IItemInputEntry, mode: Mode): string {
 	switch (mode) {
 		case Mode.VALIDATION:
 		case Mode.SCORING:

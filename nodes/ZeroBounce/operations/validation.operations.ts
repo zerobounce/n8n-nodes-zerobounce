@@ -71,6 +71,8 @@ const ItemInputFields: INodeProperties[] = [
 ];
 
 const BatchValidateFields: INodeProperties[] = [
+	CombineItems,
+	SplitItems,
 	{
 		...AddOptions,
 		options: [
