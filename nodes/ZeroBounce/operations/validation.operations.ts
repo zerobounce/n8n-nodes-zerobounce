@@ -71,6 +71,7 @@ const ItemInputFields: INodeProperties[] = [
 ];
 
 const BatchValidateFields: INodeProperties[] = [
+	ApiEndpoint,
 	CombineItems,
 	SplitItems,
 	{

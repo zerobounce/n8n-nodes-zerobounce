@@ -232,7 +232,9 @@ async function batchValidate(context: IExecuteFunctions, itemIndex: number): Pro
 		verify_plus: options.verifyPlus,
 	};
 
-	const fullResponse = await zbPostRequest(context, BaseUrl.BULK_V2, BulkEndpoint.ValidateBatch, request);
+	const baseUrl = context.getNodeParameter(ApiEndpoint.name, itemIndex, BaseUrl.DEFAULT) as BaseUrl;
+
+	const fullResponse = await zbPostRequest(context, baseUrl, BulkEndpoint.ValidateBatch, request);
 	const response = fullResponse.body as IValidateBatchResult;
 	const emailBatch = response.email_batch ?? [];
 	const errors = response.errors ?? [];
