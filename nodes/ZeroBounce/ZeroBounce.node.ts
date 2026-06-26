@@ -20,8 +20,8 @@ export class ZeroBounce implements INodeType {
 		displayName: 'ZeroBounce',
 		name: 'zeroBounce',
 		icon: {
-			light: 'file:../../icons/zerobounce.svg',
-			dark: 'file:../../icons/zerobounce.dark.svg',
+			light: 'file:../../icons/zb-icon.svg',
+			dark: 'file:../../icons/zb-icon.dark.svg',
 		},
 		group: ['transform', 'output'],
 		version: 1,

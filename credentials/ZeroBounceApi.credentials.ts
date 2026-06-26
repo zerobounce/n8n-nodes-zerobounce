@@ -14,8 +14,8 @@ export class ZeroBounceApi implements ICredentialType {
 	name = Credentials.ZeroBounceApi;
 	displayName = 'ZeroBounce API';
 	icon: Icon = {
-		light: 'file:../icons/zerobounce.svg',
-		dark: 'file:../icons/zerobounce.dark.svg',
+		light: 'file:../icons/zb-icon.svg',
+		dark: 'file:../icons/zb-icon.dark.svg',
 	};
 	documentationUrl = 'https://www.zerobounce.net/docs/api-dashboard/#API_keys_management';
 	properties: INodeProperties[] = [ApiKey];
