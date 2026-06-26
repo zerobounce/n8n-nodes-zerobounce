@@ -3,6 +3,7 @@ import {
 	IExecuteFunctions,
 	IHttpRequestOptions,
 	IN8nHttpFullResponse,
+	JsonObject,
 	NodeApiError,
 	NodeOperationError,
 } from 'n8n-workflow';
@@ -61,8 +62,10 @@ export async function zbRequest(
 			requestOptions,
 		)) as IN8nHttpFullResponse;
 	} catch (error) {
-		context.logger.debug(`ZeroBounce API call failed with status ${error?.httpCode ?? 'unknown'}: ${error.message}`);
-		throw error;
+		context.logger.debug(
+			`ZeroBounce API call failed with status ${error?.httpCode ?? 'unknown'}: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		throw new NodeApiError(context.getNode(), error as JsonObject, { httpCode: error.httpCode });
 	}
 
 	context.logger.debug(

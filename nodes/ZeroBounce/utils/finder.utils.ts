@@ -65,35 +65,35 @@ export function isUnsuccessfulResponse(response: unknown): response is IFindUnsu
 	);
 }
 
-export async function find(context: IExecuteFunctions, i: number, mode: Mode): Promise<INodeExecutionData[]> {
-	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
-	const findBy = context.getNodeParameter(FindBy.name, i) as FindByType;
+export async function find(context: IExecuteFunctions, itemIndex: number, mode: Mode): Promise<INodeExecutionData[]> {
+	const baseUrl = context.getNodeParameter(ApiEndpoint.name, itemIndex) as BaseUrl;
+	const findBy = context.getNodeParameter(FindBy.name, itemIndex) as FindByType;
 
 	let domain: string | undefined;
 	let companyName: string | undefined;
 
 	switch (findBy) {
 		case FindByType.DOMAIN:
-			domain = context.getNodeParameter(Domain.name, i) as string;
+			domain = context.getNodeParameter(Domain.name, itemIndex) as string;
 			break;
 		case FindByType.COMPANY_NAME:
-			companyName = context.getNodeParameter(CompanyName.name, i) as string;
+			companyName = context.getNodeParameter(CompanyName.name, itemIndex) as string;
 			break;
 	}
 
 	let request: IFindRequest | IDomainSearchRequest;
 
 	if (mode === Mode.EMAIL_FINDER) {
-		const firstName = context.getNodeParameter(FirstName.name, i) as string | undefined;
-		const middleName = context.getNodeParameter(MiddleName.name, i) as string | undefined;
-		const lastName = context.getNodeParameter(LastName.name, i) as string | undefined;
+		const firstName = context.getNodeParameter(FirstName.name, itemIndex) as string | undefined;
+		const middleName = context.getNodeParameter(MiddleName.name, itemIndex) as string | undefined;
+		const lastName = context.getNodeParameter(LastName.name, itemIndex) as string | undefined;
 
 		if (isBlank(firstName) && isBlank(lastName)) {
 			throw new NodeOperationError(
 				context.getNode(),
 				`Email Finder requires '${FirstName.displayName}' or '${LastName.displayName}'`,
 				{
-					itemIndex: i,
+					itemIndex: itemIndex,
 					description: `Enter a value for '${FirstName.displayName}', '${LastName.displayName}' or both`,
 				},
 			);
@@ -126,7 +126,7 @@ export async function find(context: IExecuteFunctions, i: number, mode: Mode): P
 	return [
 		{
 			json: response,
-			pairedItem: i,
+			pairedItem: itemIndex,
 		} as INodeExecutionData,
 	] as INodeExecutionData[];
 }

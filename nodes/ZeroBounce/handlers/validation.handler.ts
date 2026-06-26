@@ -71,7 +71,7 @@ interface IValidateBatchResult extends IDataObject {
  * This function sends a GET request to the ZeroBounce `/validate` endpoint to check the validity, deliverability, and other properties of a single email address.
  *
  * @param {IExecuteFunctions} context - The n8n execution context, providing access to node parameters and credentials.
- * @param {number} i - The index of the current item being processed by n8n.
+ * @param {number} itemIndex - The index of the current item being processed by n8n.
  * @returns {Promise<INodeExecutionData[]>} A promise that resolves to an array containing the API response as JSON. The response includes details such as validation status, sub-status, domain info, and more.
  *
  * @throws {NodeOperationError} If the ZeroBounce API returns an error or the validation fails (e.g., invalid API key, malformed email, or other API-side issues).
@@ -105,11 +105,11 @@ interface IValidateBatchResult extends IDataObject {
  * - Throws an error if the API returns an error response or fails to validate the email.
  * - Handles all request construction and response parsing internally.
  */
-async function validate(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
-	const email = context.getNodeParameter(Email.name, i) as string;
+async function validate(context: IExecuteFunctions, itemIndex: number): Promise<INodeExecutionData[]> {
+	const baseUrl = context.getNodeParameter(ApiEndpoint.name, itemIndex) as BaseUrl;
+	const email = context.getNodeParameter(Email.name, itemIndex) as string;
 
-	const options = context.getNodeParameter(AddOptions.name, i, {}) as {
+	const options = context.getNodeParameter(AddOptions.name, itemIndex, {}) as {
 		ipAddress?: string;
 		timeout?: number;
 		activityData?: boolean;
@@ -134,8 +134,8 @@ async function validate(context: IExecuteFunctions, i: number): Promise<INodeExe
 	return [
 		{
 			json: response,
-			pairedItem: i,
-		} as INodeExecutionData,
+			pairedItem: itemIndex,
+		},
 	] as INodeExecutionData[];
 }
 
@@ -148,7 +148,7 @@ async function validate(context: IExecuteFunctions, i: number): Promise<INodeExe
  *
  * @param context - The n8n execution context providing access to node parameters,
  *   credentials, and helper methods for making HTTP requests.
- * @param i - The index of the current item being processed.
+ * @param itemIndex - The index of the current item being processed.
  *
  * @returns A Promise resolving to an array containing one `INodeExecutionData` item:
  * - `json`: The parsed response from the ZeroBounce API, containing:
@@ -176,20 +176,20 @@ async function validate(context: IExecuteFunctions, i: number): Promise<INodeExe
  * - Optional parameters (`timeout`, `activityData`, `verifyPlus`) allow customization of request behavior.
  * - The function wraps the ZeroBounce response in an n8n `INodeExecutionData` structure for workflow compatibility.
  */
-async function batchValidate(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const combineItems = context.getNodeParameter(CombineItems.name, i, true);
+async function batchValidate(context: IExecuteFunctions, itemIndex: number): Promise<INodeExecutionData[]> {
+	const combineItems = context.getNodeParameter(CombineItems.name, itemIndex, true);
 
 	// Only process the first execution if combine items is enabled
-	if (combineItems && i > 0) {
+	if (combineItems && itemIndex > 0) {
 		return [];
 	}
 
-	const splitItems = context.getNodeParameter(SplitItems.name, i, true);
+	const splitItems = context.getNodeParameter(SplitItems.name, itemIndex, true);
 	const inputItems = context.getInputData().length;
 
 	if (!combineItems && inputItems > 5) {
 		throw new NodeOperationError(context.getNode(), `Exceeded maximum number of batches (5)`, {
-			itemIndex: i,
+			itemIndex: itemIndex,
 			description: `Enable '${CombineItems.displayName}' to combine inputs into batches of 200 to avoid rate limiting`,
 		});
 	}
@@ -209,7 +209,7 @@ async function batchValidate(context: IExecuteFunctions, i: number): Promise<INo
 		entries.push(...uniqueEntries.values());
 	} else {
 		// Only get the data for the current inputItem
-		entries.push(...convertItemInput(context, i, Mode.VALIDATION));
+		entries.push(...convertItemInput(context, itemIndex, Mode.VALIDATION));
 	}
 
 	if (entries.length > 200) {
@@ -219,7 +219,7 @@ async function batchValidate(context: IExecuteFunctions, i: number): Promise<INo
 		);
 	}
 
-	const options = context.getNodeParameter(AddOptions.name, i, {}) as {
+	const options = context.getNodeParameter(AddOptions.name, itemIndex, {}) as {
 		timeout?: number;
 		activityData?: boolean;
 		verifyPlus?: boolean;
@@ -242,8 +242,8 @@ async function batchValidate(context: IExecuteFunctions, i: number): Promise<INo
 	}
 
 	if (splitItems ?? true) {
-		const results = emailBatch.map((result) => ({ json: { ...result } }) as INodeExecutionData);
-		const errorResults = errors.map((result) => ({ json: { ...result } }) as INodeExecutionData);
+		const results = emailBatch.map((result) => ({ json: { ...result } }));
+		const errorResults = errors.map((result) => ({ json: { ...result } }));
 
 		// Return a result for validation result or error
 		return [...results, ...errorResults];
@@ -252,30 +252,30 @@ async function batchValidate(context: IExecuteFunctions, i: number): Promise<INo
 		return [
 			{
 				json: response,
-				pairedItem: i,
-			} as INodeExecutionData,
+				pairedItem: itemIndex,
+			},
 		] as INodeExecutionData[];
 	}
 }
 
 export class ValidationHandler implements IOperationHandler {
-	handle(context: IExecuteFunctions, operation: string, i: number): Promise<INodeExecutionData[]> {
+	handle(context: IExecuteFunctions, operation: string, itemIndex: number): Promise<INodeExecutionData[]> {
 		switch (operation) {
 			case Operations.ValidationValidate:
-				return validate(context, i);
+				return validate(context, itemIndex);
 			case Operations.ValidationBatchValidate:
-				return batchValidate(context, i);
+				return batchValidate(context, itemIndex);
 			case Operations.BulkValidationSendFile:
-				return sendFile(context, i, Mode.VALIDATION);
+				return sendFile(context, itemIndex, Mode.VALIDATION);
 			case Operations.BulkValidationGetFile:
-				return getFile(context, i, Mode.VALIDATION);
+				return getFile(context, itemIndex, Mode.VALIDATION);
 			case Operations.BulkValidationFileStatus:
-				return fileStatus(context, i, Mode.VALIDATION);
+				return fileStatus(context, itemIndex, Mode.VALIDATION);
 			case Operations.BulkValidationDeleteFile:
-				return deleteFile(context, i, Mode.VALIDATION);
+				return deleteFile(context, itemIndex, Mode.VALIDATION);
 			default:
 				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`, {
-					itemIndex: i,
+					itemIndex: itemIndex,
 					description: 'Please select an operation from the list',
 				});
 		}

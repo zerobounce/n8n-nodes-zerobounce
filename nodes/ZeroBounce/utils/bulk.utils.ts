@@ -277,7 +277,7 @@ async function sendFileDetails(
  * and includes configuration options such as header presence, duplicate removal, and column mapping.
  *
  * @param context - The n8n execution context providing access to node parameters, binary helpers, and HTTP utilities.
- * @param i - The index of the current input item being processed.
+ * @param itemIndex - The index of the current input item being processed.
  * @param mode - Determines the bulk operation mode:
  *   - `BulkMode.VALIDATION`: Email validation upload.
  *   - `BulkMode.SCORING`: Email scoring upload.
@@ -314,16 +314,16 @@ async function sendFileDetails(
  * - The correct endpoint (`/sendfile` or `/scoring/sendfile`) is automatically selected based on `mode`.
  * - Throws detailed `NodeOperationError` messages for all failure conditions to aid debugging.
  */
-export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode): Promise<INodeExecutionData[]> {
-	const inputType = context.getNodeParameter(SendFileInputType.name, i) as SendFileInputFieldType;
+export async function sendFile(context: IExecuteFunctions, itemIndex: number, mode: Mode): Promise<INodeExecutionData[]> {
+	const inputType = context.getNodeParameter(SendFileInputType.name, itemIndex) as SendFileInputFieldType;
 
 	if (inputType === undefined || inputType === null) {
 		throw new NodeOperationError(context.getNode(), 'Please select input type');
 	}
 
-	const options = context.getNodeParameter(AddOptions.name, i, {}) as ISendFileOptions;
+	const options = context.getNodeParameter(AddOptions.name, itemIndex, {}) as ISendFileOptions;
 
-	const details: ISendFileDetails | null = await sendFileDetails(context, i, mode, inputType, options);
+	const details: ISendFileDetails | null = await sendFileDetails(context, itemIndex, mode, inputType, options);
 
 	// If combine items is enabled and this isn't the first item, null is returned
 	if (details === null) {
@@ -341,6 +341,7 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 
 	// Append all values from the request object to the form
 	for (const [key, value] of Object.entries(details.request)) {
+		if (value === undefined || value === null) continue;
 		formData.append(key, value);
 	}
 
@@ -367,8 +368,8 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
 		{
 			json: response,
 			binary: binary,
-			pairedItem: i,
-		} as INodeExecutionData,
+			pairedItem: itemIndex,
+		},
 	] as INodeExecutionData[];
 }
 
@@ -381,7 +382,7 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
  * The node can either output the raw file or parse it into individual JSON results based on the selected output type.
  *
  * @param context - The n8n execution context providing node parameters, HTTP helpers, and binary utilities.
- * @param i - The index of the current input item being processed.
+ * @param itemIndex - The index of the current input item being processed.
  * @param mode - Determines the bulk operation type:
  *   - `Mode.VALIDATION`: Downloads an email validation results file.
  *   - `Mode.SCORING`: Downloads an email scoring results file.
@@ -446,9 +447,9 @@ export async function sendFile(context: IExecuteFunctions, i: number, mode: Mode
  * - Supports both raw binary file output and parsed record output.
  * - Includes full metadata (`file_name`, `file_size`, `remote_file_name`, `activity_data`) in the output JSON.
  */
-export async function getFile(context: IExecuteFunctions, i: number, mode: Mode): Promise<INodeExecutionData[]> {
-	const fileId = getFileId(context, i);
-	const options = context.getNodeParameter(AddOptions.name, i, {}) as IGetFileOptions;
+export async function getFile(context: IExecuteFunctions, itemIndex: number, mode: Mode): Promise<INodeExecutionData[]> {
+	const fileId = getFileId(context, itemIndex);
+	const options = context.getNodeParameter(AddOptions.name, itemIndex, {}) as IGetFileOptions;
 
 	const request: IGetFileRequest = {
 		file_id: fileId,
@@ -478,7 +479,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 
 	const contentType = headers['content-type'] as string;
 
-	if (contentType !== 'application/octet-stream') {
+	if (!contentType?.startsWith('application/octet-stream')) {
 		const message = getFileErrorMessage(contentType, response);
 		throw new NodeOperationError(context.getNode(), 'Failed to get file: ' + message);
 	}
@@ -492,7 +493,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 
 	const binaryData = await context.helpers.prepareBinaryData(response, fileName, 'text/csv');
 
-	const outputType = context.getNodeParameter(GetFileOutputType.name, i) as GetFileOutputFieldType;
+	const outputType = context.getNodeParameter(GetFileOutputType.name, itemIndex) as GetFileOutputFieldType;
 
 	if (outputType === undefined || outputType === null) {
 		throw new NodeOperationError(context.getNode(), 'Please select output type');
@@ -508,7 +509,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 		file_id: fileId,
 		file_name: binaryData.fileName,
 		remote_file_name: remoteFilename,
-		file_size: (headers['content-length'] as number) ?? 0,
+		file_size: Number(headers['content-length']) || Number(binaryData.fileSize),
 		activity_data: request.activity_data,
 		result_number: undefined,
 		total_results: undefined,
@@ -517,7 +518,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 	const output: INodeExecutionData = {
 		json: json,
 		binary: binary,
-		pairedItem: i,
+		pairedItem: itemIndex,
 	};
 
 	switch (outputType) {
@@ -526,23 +527,20 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 		}
 
 		case GetFileOutputFieldType.FIELDS: {
-			const results = await convertFileToFields(context, i, binaryData);
+			const results = await convertFileToFields(context, itemIndex, binaryData);
 
 			if (options.splitItems ?? true) {
 				// Return a result for each line in the file
-				return results.map(
-					(result, index) =>
-						({
-							...output,
-							json: {
-								...json,
-								result_number: index + 1,
-								total_results: results.length,
-								...result,
-							},
-							binary: index > 0 ? undefined : binary,
-						}) as INodeExecutionData,
-				);
+				return results.map((result, index) => ({
+					...output,
+					json: {
+						...json,
+						result_number: index + 1,
+						total_results: results.length,
+						...result,
+					},
+					binary: index > 0 ? undefined : binary,
+				}));
 			} else {
 				json.total_results = results.length;
 				json.results = results;
@@ -550,6 +548,10 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
 				// Return a single result containing the entire results batch
 				return [output];
 			}
+		}
+
+		default: {
+			return [output];
 		}
 	}
 }
@@ -563,7 +565,7 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
  * with the returned error message.
  *
  * @param context - The n8n execution context providing access to parameters, input data, and HTTP helpers.
- * @param i - The index of the current workflow item being processed.
+ * @param itemIndex - The index of the current workflow item being processed.
  * @param mode - Whether to request the status of a validation or scoring file
  * @returns A Promise resolving to an `INodeExecutionData` object containing:
  * - `json`: The parsed response from the ZeroBounce API, including fields such as:
@@ -595,8 +597,8 @@ export async function getFile(context: IExecuteFunctions, i: number, mode: Mode)
  * @remarks
  * - Throws immediately if the API response indicates failure.
  */
-export async function fileStatus(context: IExecuteFunctions, i: number, mode: Mode): Promise<INodeExecutionData[]> {
-	const fileId = getFileId(context, i);
+export async function fileStatus(context: IExecuteFunctions, itemIndex: number, mode: Mode): Promise<INodeExecutionData[]> {
+	const fileId = getFileId(context, itemIndex);
 
 	const request: IFileStatusRequest = {
 		file_id: fileId,
@@ -630,8 +632,8 @@ export async function fileStatus(context: IExecuteFunctions, i: number, mode: Mo
 	return [
 		{
 			json: response,
-			pairedItem: i,
-		} as INodeExecutionData,
+			pairedItem: itemIndex,
+		},
 	] as INodeExecutionData[];
 }
 
@@ -644,7 +646,7 @@ export async function fileStatus(context: IExecuteFunctions, i: number, mode: Mo
  * The node outputs a JSON object indicating whether the file was successfully deleted.
  *
  * @param context - The n8n execution context providing node parameters, credentials, and HTTP helpers.
- * @param i - The index of the current workflow item being processed.
+ * @param itemIndex - The index of the current workflow item being processed.
  * @param mode - Determines the bulk operation type:
  *   - `Mode.VALIDATION`: Deletes a validation file.
  *   - `Mode.SCORING`: Deletes a scoring file.
@@ -688,8 +690,8 @@ export async function fileStatus(context: IExecuteFunctions, i: number, mode: Mo
  * - Returns the API response merged with a `deleted` flag for convenient downstream use.
  * - Does not throw on API-level errors — the `deleted` flag reflects the result.
  */
-export async function deleteFile(context: IExecuteFunctions, i: number, mode: Mode): Promise<INodeExecutionData[]> {
-	const fileId = getFileId(context, i);
+export async function deleteFile(context: IExecuteFunctions, itemIndex: number, mode: Mode): Promise<INodeExecutionData[]> {
+	const fileId = getFileId(context, itemIndex);
 
 	const request: IDeleteFileRequest = {
 		file_id: fileId,
@@ -721,7 +723,7 @@ export async function deleteFile(context: IExecuteFunctions, i: number, mode: Mo
 				deleted: response.success,
 				...response,
 			},
-			pairedItem: i,
+			pairedItem: itemIndex,
 		},
 	] as INodeExecutionData[];
 }

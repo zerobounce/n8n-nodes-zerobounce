@@ -78,10 +78,10 @@ interface IDeleteFilterResponse extends IDataObject {
  * Fetches current credit balance from ZeroBounce and optionally ensures the account has enough credits.
  * Throws if the balance is below the requested threshold.
  */
-async function getCredits(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
+async function getCredits(context: IExecuteFunctions, itemIndex: number): Promise<INodeExecutionData[]> {
+	const baseUrl = context.getNodeParameter(ApiEndpoint.name, itemIndex) as BaseUrl;
 
-	const options = context.getNodeParameter(AddOptions.name, i, {}) as { creditsRequired?: number };
+	const options = context.getNodeParameter(AddOptions.name, itemIndex, {}) as { creditsRequired?: number };
 	const creditsRequired = options.creditsRequired;
 
 	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.GetCredits);
@@ -109,7 +109,7 @@ async function getCredits(context: IExecuteFunctions, i: number): Promise<INodeE
 			context.getNode(),
 			`Not enough credits. Required: ${creditsRequired}, available: ${availableCredits}`,
 			{
-				itemIndex: i,
+				itemIndex: itemIndex,
 				description: 'You must have sufficient account credits to perform this operation.',
 			},
 		);
@@ -118,8 +118,8 @@ async function getCredits(context: IExecuteFunctions, i: number): Promise<INodeE
 	return [
 		{
 			json: response,
-			pairedItem: i,
-		} as INodeExecutionData,
+			pairedItem: itemIndex,
+		},
 	] as INodeExecutionData[];
 }
 
@@ -127,12 +127,12 @@ async function getCredits(context: IExecuteFunctions, i: number): Promise<INodeE
  * Fetches API usage statistics between start and end dates.
  * Dates are normalized to ISO yyyy-mm-dd.
  */
-async function getApiUsage(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
+async function getApiUsage(context: IExecuteFunctions, itemIndex: number): Promise<INodeExecutionData[]> {
+	const baseUrl = context.getNodeParameter(ApiEndpoint.name, itemIndex) as BaseUrl;
 
 	const request = {
-		start_date: getDateParameter(context, i, StartDate),
-		end_date: getDateParameter(context, i, EndDate),
+		start_date: getDateParameter(context, itemIndex, StartDate),
+		end_date: getDateParameter(context, itemIndex, EndDate),
 	} as IGetApiUsageRequest;
 
 	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.GetApiUsage, request);
@@ -145,13 +145,13 @@ async function getApiUsage(context: IExecuteFunctions, i: number): Promise<INode
 	return [
 		{
 			json: response,
-			pairedItem: i,
-		} as INodeExecutionData,
+			pairedItem: itemIndex,
+		},
 	] as INodeExecutionData[];
 }
 
-async function listFilters(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
+async function listFilters(context: IExecuteFunctions, itemIndex: number): Promise<INodeExecutionData[]> {
+	const baseUrl = context.getNodeParameter(ApiEndpoint.name, itemIndex) as BaseUrl;
 
 	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.FiltersList);
 	const response = fullResponse.body as IListFiltersResponse[] | IAltErrorResponse;
@@ -165,7 +165,7 @@ async function listFilters(context: IExecuteFunctions, i: number): Promise<INode
 			json: {
 				filters: response,
 			},
-			pairedItem: i,
+			pairedItem: itemIndex,
 		},
 	] as INodeExecutionData[];
 }
@@ -177,13 +177,13 @@ enum AddOrDelete {
 
 async function addOrDeleteFilter(
 	context: IExecuteFunctions,
-	i: number,
+	itemIndex: number,
 	mode: AddOrDelete,
 ): Promise<INodeExecutionData[]> {
-	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
-	const rule = context.getNodeParameter(FilterRule.name, i) as Rule;
-	const target = context.getNodeParameter(FilterTarget.name, i) as Target;
-	const value = context.getNodeParameter(FilterValue.name, i) as string;
+	const baseUrl = context.getNodeParameter(ApiEndpoint.name, itemIndex) as BaseUrl;
+	const rule = context.getNodeParameter(FilterRule.name, itemIndex) as Rule;
+	const target = context.getNodeParameter(FilterTarget.name, itemIndex) as Target;
+	const value = context.getNodeParameter(FilterValue.name, itemIndex) as string;
 
 	const request = new URLSearchParams();
 
@@ -205,27 +205,27 @@ async function addOrDeleteFilter(
 	return [
 		{
 			json: response,
-			pairedItem: i,
+			pairedItem: itemIndex,
 		},
 	] as INodeExecutionData[];
 }
 
 class AccountHandler implements IOperationHandler {
-	async handle(context: IExecuteFunctions, operation: string, i: number): Promise<INodeExecutionData[]> {
+	async handle(context: IExecuteFunctions, operation: string, itemIndex: number): Promise<INodeExecutionData[]> {
 		switch (operation) {
 			case Operations.AccountGetCredits:
-				return getCredits(context, i);
+				return getCredits(context, itemIndex);
 			case Operations.AccountGetApiUsage:
-				return getApiUsage(context, i);
+				return getApiUsage(context, itemIndex);
 			case Operations.AccountListFilters:
-				return listFilters(context, i);
+				return listFilters(context, itemIndex);
 			case Operations.AccountAddFilter:
-				return addOrDeleteFilter(context, i, AddOrDelete.ADD);
+				return addOrDeleteFilter(context, itemIndex, AddOrDelete.ADD);
 			case Operations.AccountDeleteFilter:
-				return addOrDeleteFilter(context, i, AddOrDelete.DELETE);
+				return addOrDeleteFilter(context, itemIndex, AddOrDelete.DELETE);
 			default:
 				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`, {
-					itemIndex: i,
+					itemIndex: itemIndex,
 					description: 'Please select an operation from the list',
 				});
 		}

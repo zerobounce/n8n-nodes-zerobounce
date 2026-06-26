@@ -29,7 +29,7 @@ import { NameType, NameTypeOptions } from '../fields/email-finder.field';
 import { ActivityDataHandler } from '../handlers/activity-data.handler';
 
 export interface IOperationHandler {
-	handle(context: IExecuteFunctions, operation: string, i: number): Promise<INodeExecutionData[]>;
+	handle(context: IExecuteFunctions, operation: string, itemIndex: number): Promise<INodeExecutionData[]>;
 }
 
 export interface IItemInputEntry {
@@ -596,7 +596,7 @@ function convertJson(context: IExecuteFunctions, itemIndex: number, json: unknow
 			`Failed to parse ${nameOfRequiredValue(mode)} JSON: ` + (err as Error).message,
 			{
 				itemIndex: itemIndex,
-				description: err.description,
+				description: `Ensure the ${nameOfRequiredValue(mode)} value is valid JSON`,
 			},
 		);
 	}
@@ -702,10 +702,9 @@ export function getFileNameFromHeader(headers: IDataObject, fileId: string): str
 }
 
 export function getBinaryData(context: IExecuteFunctions, i: number, binaryKey: string) {
-	const inputData = context.getInputData(i);
-	const binaryInput = inputData.find((item) => item?.binary !== undefined);
+	const item = context.getInputData()[i];
 
-	if (!binaryInput) {
+	if (item?.binary === undefined) {
 		throw new NodeOperationError(context.getNode(), 'No binary input found', {
 			itemIndex: i,
 			description: 'The previous node needs to output a binary CSV file',
@@ -722,12 +721,17 @@ export interface IStringFields {
 export function toFields(header: string[], values: string[]): IStringFields {
 	return Object.fromEntries(
 		header.map((k: string, i: number): [string, string | object | object[]] => {
-			let value = values[i];
+			const value = values[i];
 
-			// Domain Search 'ZB Other Domain Formats' column is returned as a pseudo JSON array. Replace single quotes with double and parse as JSON
-			if (value.startsWith('[{') || value.startsWith('{')) {
-				value = value.replace(/'/g, '"');
-				value = JSON.parse(value);
+			// Domain Search 'ZB Other Domain Formats' column is returned as a pseudo JSON array.
+			// Replace single quotes with double and parse as JSON; fall back to the raw string
+			// if the value isn't valid JSON so a single malformed cell doesn't fail the whole file.
+			if (value?.startsWith('[{') || value?.startsWith('{')) {
+				try {
+					return [k, JSON.parse(value.replace(/'/g, '"'))];
+				} catch {
+					return [k, value];
+				}
 			}
 
 			return [k, value];

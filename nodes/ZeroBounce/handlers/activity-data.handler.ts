@@ -14,9 +14,9 @@ interface IGetActivityDataResponse extends IDataObject {
 	active_in_days?: string; //	The last activity date that is less than [30/60/90/180/365/365+]
 }
 
-async function getActivityData(context: IExecuteFunctions, i: number) {
-	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
-	const email = context.getNodeParameter(Email.name, i) as string;
+async function getActivityData(context: IExecuteFunctions, itemIndex: number) {
+	const baseUrl = context.getNodeParameter(ApiEndpoint.name, itemIndex) as BaseUrl;
+	const email = context.getNodeParameter(Email.name, itemIndex) as string;
 
 	const request: IGetActivityDataRequest = { email: email };
 
@@ -30,15 +30,15 @@ async function getActivityData(context: IExecuteFunctions, i: number) {
 	return [
 		{
 			json: response,
-			pairedItem: i,
-		} as INodeExecutionData,
+			pairedItem: itemIndex,
+		},
 	] as INodeExecutionData[];
 }
 
 export class ActivityDataHandler implements IOperationHandler {
-	handle(context: IExecuteFunctions, operation: string, i: number): Promise<INodeExecutionData[]> {
+	handle(context: IExecuteFunctions, operation: string, itemIndex: number): Promise<INodeExecutionData[]> {
 		if (operation === Operations.ActivityData) {
-			return getActivityData(context, i);
+			return getActivityData(context, itemIndex);
 		} else {
 			throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`);
 		}

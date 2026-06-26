@@ -3,6 +3,8 @@ import {
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
+	JsonObject,
+	NodeApiError,
 	NodeConnectionTypes,
 	NodeOperationError,
 } from 'n8n-workflow';
@@ -49,6 +51,7 @@ export class ZeroBounce implements INodeType {
 				required: true,
 				noDataExpression: true,
 				description: 'Choose the ZeroBounce API you wish to use',
+				// eslint-disable-next-line @n8n/community-nodes/options-sorted-alphabetically
 				options: [
 					{
 						name: 'Account',
@@ -118,17 +121,24 @@ export class ZeroBounce implements INodeType {
 				returnData.push(...responseData);
 			} catch (error) {
 				if (this.continueOnFail()) {
-					returnData.push({ json: error, error, pairedItem: itemIndex });
-				} else {
-					// Adding `itemIndex` allows other workflows to handle this error
-					if (error.context) {
-						// If the error thrown already contains the context property,
-						// only append the itemIndex
-						error.context.itemIndex = itemIndex;
-						throw error;
-					}
-					throw new NodeOperationError(this.getNode(), error, { itemIndex });
+					returnData.push({
+						json: { error: error.message },
+						pairedItem: itemIndex,
+					});
+					continue;
 				}
+
+				// Preserve NodeApiError (and its HTTP context) instead of downgrading it
+				// to a NodeOperationError; only associate it with the current item.
+				if (error instanceof NodeApiError) {
+					error.context.itemIndex = itemIndex;
+					throw new NodeApiError(this.getNode(), error as unknown as JsonObject, { itemIndex });
+				}
+
+				throw new NodeOperationError(this.getNode(), error as Error, {
+					description: error.description,
+					itemIndex: itemIndex,
+				});
 			}
 		}
 

@@ -15,9 +15,9 @@ interface IScoreResult extends IDataObject {
 	score: number; // [1-10]
 }
 
-async function score(context: IExecuteFunctions, i: number): Promise<INodeExecutionData[]> {
-	const baseUrl = context.getNodeParameter(ApiEndpoint.name, i) as BaseUrl;
-	const email = context.getNodeParameter(Email.name, i) as string;
+async function score(context: IExecuteFunctions, itemIndex: number): Promise<INodeExecutionData[]> {
+	const baseUrl = context.getNodeParameter(ApiEndpoint.name, itemIndex) as BaseUrl;
+	const email = context.getNodeParameter(Email.name, itemIndex) as string;
 
 	const request: IScoreRequest = {
 		email: email,
@@ -33,27 +33,27 @@ async function score(context: IExecuteFunctions, i: number): Promise<INodeExecut
 	return [
 		{
 			json: response,
-			pairedItem: i,
-		} as INodeExecutionData,
+			pairedItem: itemIndex,
+		},
 	] as INodeExecutionData[];
 }
 
 export class ScoringHandler implements IOperationHandler {
-	handle(context: IExecuteFunctions, operation: string, i: number): Promise<INodeExecutionData[]> {
+	handle(context: IExecuteFunctions, operation: string, itemIndex: number): Promise<INodeExecutionData[]> {
 		switch (operation) {
 			case Operations.ScoringScore:
-				return score(context, i);
+				return score(context, itemIndex);
 			case Operations.BulkScoringSendFile:
-				return sendFile(context, i, Mode.SCORING);
+				return sendFile(context, itemIndex, Mode.SCORING);
 			case Operations.BulkScoringGetFile:
-				return getFile(context, i, Mode.SCORING);
+				return getFile(context, itemIndex, Mode.SCORING);
 			case Operations.BulkScoringFileStatus:
-				return fileStatus(context, i, Mode.SCORING);
+				return fileStatus(context, itemIndex, Mode.SCORING);
 			case Operations.BulkScoringDeleteFile:
-				return deleteFile(context, i, Mode.SCORING);
+				return deleteFile(context, itemIndex, Mode.SCORING);
 			default:
 				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`, {
-					itemIndex: i,
+					itemIndex: itemIndex,
 					description: 'Please select an operation from the list',
 				});
 		}

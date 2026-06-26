@@ -5,21 +5,21 @@ import { deleteFile, fileStatus, getFile, sendFile } from '../utils/bulk.utils';
 import { find } from '../utils/finder.utils';
 
 export class EmailFinderHandler implements IOperationHandler {
-	handle(context: IExecuteFunctions, operation: string, i: number): Promise<INodeExecutionData[]> {
+	handle(context: IExecuteFunctions, operation: string, itemIndex: number): Promise<INodeExecutionData[]> {
 		switch (operation) {
 			case Operations.EmailFinderFind:
-				return find(context, i, Mode.EMAIL_FINDER);
+				return find(context, itemIndex, Mode.EMAIL_FINDER);
 			case Operations.BulkEmailFinderSendFile:
-				return sendFile(context, i, Mode.EMAIL_FINDER);
+				return sendFile(context, itemIndex, Mode.EMAIL_FINDER);
 			case Operations.BulkEmailFinderGetFile:
-				return getFile(context, i, Mode.EMAIL_FINDER);
+				return getFile(context, itemIndex, Mode.EMAIL_FINDER);
 			case Operations.BulkEmailFinderFileStatus:
-				return fileStatus(context, i, Mode.EMAIL_FINDER);
+				return fileStatus(context, itemIndex, Mode.EMAIL_FINDER);
 			case Operations.BulkEmailFinderDeleteFile:
-				return deleteFile(context, i, Mode.EMAIL_FINDER);
+				return deleteFile(context, itemIndex, Mode.EMAIL_FINDER);
 			default:
 				throw new NodeOperationError(context.getNode(), `Operation ${operation} not supported`, {
-					itemIndex: i,
+					itemIndex: itemIndex,
 					description: 'Please select an operation from the list',
 				});
 		}
