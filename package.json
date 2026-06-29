@@ -1,12 +1,9 @@
 {
 	"name": "@zerobounce/n8n-nodes-zerobounce",
 	"version": "1.1.2",
-	"publishConfig": {
-		"access": "public"
-	},
 	"description": "n8n node to work with the ZeroBounce API",
 	"license": "MIT",
-	"homepage": "https://www.zerobounce.net",
+	"homepage": "https://zerobounce.net",
 	"keywords": [
 		"n8n-community-node-package",
 		"n8n",
@@ -28,7 +25,6 @@
 		"dev": "n8n-node dev",
 		"lint": "n8n-node lint",
 		"lint:fix": "n8n-node lint --fix",
-		"test": "n8n-node lint && n8n-node build && tsc --noEmit",
 		"release": "n8n-node release",
 		"prepublishOnly": "n8n-node prerelease"
 	},
@@ -54,5 +50,8 @@
 	},
 	"peerDependencies": {
 		"n8n-workflow": "*"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }

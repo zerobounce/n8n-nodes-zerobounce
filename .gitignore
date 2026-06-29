@@ -22,7 +22,6 @@ debug.log
 error.log
 
 # IDE / OS files
-.vscode/
 .idea/
 .DS_Store
 Thumbs.db
