@@ -51,7 +51,6 @@ export class ZeroBounce implements INodeType {
 				required: true,
 				noDataExpression: true,
 				description: 'Choose the ZeroBounce API you wish to use',
-				// eslint-disable-next-line @n8n/community-nodes/options-sorted-alphabetically
 				options: [
 					{
 						name: 'Account',
