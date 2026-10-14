@@ -56,6 +56,12 @@ export class ZeroBounceApi implements ICredentialType {
 			requestOptions.json = true;
 		}
 
+		requestOptions.headers = {
+			...requestOptions.headers,
+			'X-ZB-Origin': 'external-n8n',
+			'X-ZB-Origin-Id': apiKey.slice(-5),
+		};
+
 		return requestOptions;
 	};
 }
