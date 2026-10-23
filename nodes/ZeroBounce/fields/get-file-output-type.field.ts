@@ -8,7 +8,6 @@ export enum GetFileOutputFieldType {
 	FIELDS = 'fields',
 }
 
-// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 export const GetFileOutputType: INodeProperties = {
 	displayName: 'Output Type',
 	name: Fields.GetFileOutputType,
@@ -20,5 +19,5 @@ export const GetFileOutputType: INodeProperties = {
 		{ name: 'File', value: GetFileOutputFieldType.FILE },
 		{ name: 'Fields', value: GetFileOutputFieldType.FIELDS },
 	],
-	default: GetFileOutputFieldType.FILE,
+	default: `${GetFileOutputFieldType.FILE}`,
 };

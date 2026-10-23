@@ -23,8 +23,8 @@
 		"build": "n8n-node build",
 		"build:watch": "tsc --watch",
 		"dev": "n8n-node dev",
-		"lint": "n8n-node lint",
-		"lint:fix": "n8n-node lint --fix",
+		"lint": "n8n-node lint && eslint --no-inline-config .",
+		"lint:fix": "n8n-node lint --fix && eslint --no-inline-config --fix .",
 		"release": "n8n-node release",
 		"prepublishOnly": "n8n-node prerelease"
 	},

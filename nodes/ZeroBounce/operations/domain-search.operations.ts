@@ -142,7 +142,6 @@ const DeleteFileFields: INodeProperties[] = [
 );
 
 export const DomainSearchOperations: INodeProperties[] = [
-	// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 	{
 		displayName: 'Operation',
 		name: 'operation',
@@ -188,7 +187,7 @@ export const DomainSearchOperations: INodeProperties[] = [
 				description: 'Delete a previously submitted domain search file',
 			},
 		],
-		default: Operations.DomainSearch,
+		default: `${Operations.DomainSearch}`,
 	},
 	...FindFields,
 	...SendFileFields,

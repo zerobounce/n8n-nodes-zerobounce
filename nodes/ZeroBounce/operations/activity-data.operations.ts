@@ -19,7 +19,6 @@ const ActivityDataFields: INodeProperties[] = [
 );
 
 export const ActivityDataOperations: INodeProperties[] = [
-	// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 	{
 		displayName: 'Operation',
 		name: 'operation',
@@ -42,7 +41,7 @@ export const ActivityDataOperations: INodeProperties[] = [
 					'Thus, you can improve your targeting and personalization and run more successful email campaigns.',
 			},
 		],
-		default: Operations.ActivityData,
+		default: `${Operations.ActivityData}`,
 	},
 	...ActivityDataFields,
 ];

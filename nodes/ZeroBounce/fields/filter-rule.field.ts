@@ -7,7 +7,6 @@ export enum Rule {
 	BLOCK = 'block',
 }
 
-// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 export const FilterRule: INodeProperties = {
 	displayName: 'Rule',
 	name: Fields.FilterRule,
@@ -24,5 +23,5 @@ export const FilterRule: INodeProperties = {
 			value: Rule.BLOCK,
 		},
 	],
-	default: Rule.ALLOW,
+	default: `${Rule.ALLOW}`,
 };

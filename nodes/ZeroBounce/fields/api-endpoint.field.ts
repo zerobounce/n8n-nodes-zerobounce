@@ -1,7 +1,6 @@
 import type { INodeProperties } from 'n8n-workflow';
 import { BaseUrl, Fields } from '../enums';
 
-// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 export const ApiEndpoint: INodeProperties = {
 	displayName: 'API Endpoint',
 	name: Fields.ApiEndpoint,
@@ -28,5 +27,5 @@ export const ApiEndpoint: INodeProperties = {
 				'This is an endpoint where validations and other interactions only occur within the European Union (EU)',
 		},
 	],
-	default: BaseUrl.DEFAULT,
+	default: `${BaseUrl.DEFAULT}`,
 };

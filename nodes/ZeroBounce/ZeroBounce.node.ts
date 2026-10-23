@@ -43,7 +43,6 @@ export class ZeroBounce implements INodeType {
 			},
 		],
 		properties: [
-			// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 			{
 				displayName: 'Resource',
 				name: 'resource',
@@ -85,7 +84,7 @@ export class ZeroBounce implements INodeType {
 						description: 'Activity Data allows you to gather insights into your subscribers’ overall email engagement',
 					},
 				],
-				default: Resources.Validation,
+				default: `${Resources.Validation}`,
 			},
 			...AccountOperations,
 			...ValidationOperations,

@@ -8,7 +8,6 @@ export enum SendFileInputFieldType {
 	ITEMS = 'items',
 }
 
-// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 export const SendFileInputType: INodeProperties = {
 	displayName: 'Input Type',
 	name: Fields.SendFileInputType,
@@ -28,5 +27,5 @@ export const SendFileInputType: INodeProperties = {
 			description: 'A new file constructed from input items',
 		},
 	],
-	default: SendFileInputFieldType.FILE,
+	default: `${SendFileInputFieldType.FILE}`,
 };

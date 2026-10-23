@@ -178,7 +178,6 @@ const DeleteFileFields: INodeProperties[] = [
 );
 
 export const ValidationOperations: INodeProperties[] = [
-	// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 	{
 		displayName: 'Operation',
 		name: 'operation',
@@ -228,7 +227,7 @@ export const ValidationOperations: INodeProperties[] = [
 				description: 'Delete a previously submitted validation file',
 			},
 		],
-		default: Operations.ValidationValidate,
+		default: `${Operations.ValidationValidate}`,
 	},
 	...ValidateFields,
 	...BatchValidateFields,

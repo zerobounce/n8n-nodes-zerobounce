@@ -9,7 +9,6 @@ export enum Target {
 	TLD = 'tld',
 }
 
-// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 export const FilterTarget: INodeProperties = {
 	displayName: 'Target',
 	name: Fields.FilterTarget,
@@ -34,5 +33,5 @@ export const FilterTarget: INodeProperties = {
 			value: Target.TLD,
 		},
 	],
-	default: Target.EMAIL,
+	default: `${Target.EMAIL}`,
 };

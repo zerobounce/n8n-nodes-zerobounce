@@ -225,7 +225,6 @@ const DeleteFileFields: INodeProperties[] = [
 );
 
 export const EmailFinderOperations: INodeProperties[] = [
-	// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 	{
 		displayName: 'Operation',
 		name: 'operation',
@@ -270,7 +269,7 @@ export const EmailFinderOperations: INodeProperties[] = [
 				description: 'Delete a previously submitted email finder file',
 			},
 		],
-		default: Operations.EmailFinderFind,
+		default: `${Operations.EmailFinderFind}`,
 	},
 	...FindFields,
 	...SendFileFields,

@@ -6,7 +6,6 @@ export enum FindByType {
 	COMPANY_NAME = 'companyName',
 }
 
-// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 export const FindBy: INodeProperties = {
 	displayName: 'Find By',
 	name: Fields.FindBy,
@@ -18,7 +17,7 @@ export const FindBy: INodeProperties = {
 		{ name: 'Domain', value: FindByType.DOMAIN },
 		{ name: 'Company Name', value: FindByType.COMPANY_NAME },
 	],
-	default: FindByType.DOMAIN,
+	default: `${FindByType.DOMAIN}`,
 };
 
 export enum NameTypeOptions {
@@ -26,7 +25,6 @@ export enum NameTypeOptions {
 	FULL = 'full',
 }
 
-// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 export const NameType: INodeProperties = {
 	displayName: 'Name Type',
 	name: Fields.NameType,
@@ -38,7 +36,7 @@ export const NameType: INodeProperties = {
 		{ name: 'Partial', value: NameTypeOptions.PARTIAL },
 		{ name: 'Full', value: NameTypeOptions.FULL },
 	],
-	default: NameTypeOptions.PARTIAL,
+	default: `${NameTypeOptions.PARTIAL}`,
 };
 
 export const FirstNameColumnNumber: INodeProperties = {

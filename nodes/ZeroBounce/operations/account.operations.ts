@@ -60,7 +60,6 @@ const AddOrDeleteFilterFields: INodeProperties[] = [
 );
 
 export const AccountOperations: INodeProperties[] = [
-	// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 	{
 		displayName: 'Operation',
 		name: 'operation',
@@ -103,7 +102,7 @@ export const AccountOperations: INodeProperties[] = [
 				description: 'Deletes a filter rule',
 			},
 		],
-		default: Operations.AccountGetCredits,
+		default: `${Operations.AccountGetCredits}`,
 	},
 	...GetCreditsFields,
 	...GetApiUsageFields,

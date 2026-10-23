@@ -10,7 +10,6 @@ export enum ItemInputOptions {
 	MAPPED = 'mapped',
 }
 
-// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 export const ItemInputType: INodeProperties = {
 	displayName: 'Item Input Type',
 	name: Fields.ItemInputType,
@@ -35,7 +34,7 @@ export const ItemInputType: INodeProperties = {
 			description: "Map fields from input items. Useful when 'Combine Items' is enabled.",
 		},
 	],
-	default: ItemInputOptions.ASSIGNMENT,
+	default: `${ItemInputOptions.ASSIGNMENT}`,
 };
 
 export const ItemInputAssignment: INodeProperties = {

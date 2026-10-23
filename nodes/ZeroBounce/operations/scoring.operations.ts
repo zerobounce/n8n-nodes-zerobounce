@@ -147,7 +147,6 @@ const DeleteFileFields: INodeProperties[] = [
 );
 
 export const ScoringOperations: INodeProperties[] = [
-	// eslint-disable-next-line n8n-nodes-base/node-param-default-missing
 	{
 		displayName: 'Operation',
 		name: 'operation',
@@ -190,7 +189,7 @@ export const ScoringOperations: INodeProperties[] = [
 				description: 'Delete a previously submitted scoring file',
 			},
 		],
-		default: Operations.ScoringScore,
+		default: `${Operations.ScoringScore}`,
 	},
 	...ScoreFields,
 	...SendFileFields,
