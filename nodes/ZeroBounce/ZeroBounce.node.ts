@@ -35,7 +35,7 @@ export class ZeroBounce implements INodeType {
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
 		usableAsTool: true,
-		documentationUrl: 'https://www.zerobounce.net/docs/',
+		documentationUrl: 'https://www.zerobounce.net/docs',
 		credentials: [
 			{
 				name: Credentials.ZeroBounceApi,

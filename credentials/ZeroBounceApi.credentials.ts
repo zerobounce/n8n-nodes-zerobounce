@@ -17,7 +17,7 @@ export class ZeroBounceApi implements ICredentialType {
 		light: 'file:../icons/zb-icon.svg',
 		dark: 'file:../icons/zb-icon.dark.svg',
 	};
-	documentationUrl = 'https://www.zerobounce.net/docs/api-dashboard/#API_keys_management';
+	documentationUrl = 'https://www.zerobounce.net/docs/api-dashboard/keys-management';
 	properties: INodeProperties[] = [ApiKey];
 	test: ICredentialTestRequest = {
 		request: {

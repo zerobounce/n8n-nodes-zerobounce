@@ -156,7 +156,7 @@ You need a ZeroBounce API Key to use this node. Follow the steps below to genera
 4. Set the key to active and optionally configure the IP address(es) it can be used from.
 5. Toggle the API Keys' visibility and copy the value shown.
 
-For more information, see [API Keys Management](https://www.zerobounce.net/docs/api-dashboard/#API_keys_management)
+For more information, see [API Keys Management](https://www.zerobounce.net/docs/api-dashboard/keys-management)
 
 ---
 
@@ -164,7 +164,7 @@ For more information, see [API Keys Management](https://www.zerobounce.net/docs/
 
 ### 🧪 Workflow Testing
 
-Use [API Sandbox Mode](https://www.zerobounce.net/docs/email-validation-api-quickstart/#sandbox_mode__v2__)
+Use [API Sandbox Mode](https://www.zerobounce.net/docs/email-validation-api-quickstart/v2-sandbox-mode)
 data to test workflows without using your ZeroBounce credits.
 
 ---
@@ -193,7 +193,7 @@ the node's settings:
 | Email                 |          | The email address you want to validate                                                                                                                                                                                                                                                     |
 | IP Address            | ✔️       | Provide the user's IP address (IPv4) to gain location metadata (Country, City, Zip) and check if the IP is associated with known proxy/VPN usage.                                                                                                                                          |
 | Include Activity Data | ✔️       | Provides metadata about the user's recent engagement, such as the last time they opened, clicked, or forwarded an email (e.g., within 30, 90, or 180 days).                                                                                                                                |
-| Verify+               | ✔️       | Read before enabling: [Verify+](https://www.zerobounce.net/docs/email-list-validation/verify-plus#Verify_Plus). Significantly reduces "Catch-all" results. It uses proprietary technology to provide a definitive valid or invalid status for many domains that normally return catch-all. |
+| Verify+               | ✔️       | Read before enabling: [Verify+](https://www.zerobounce.net/docs/products/verify-plus). Significantly reduces "Catch-all" results. It uses proprietary technology to provide a definitive valid or invalid status for many domains that normally return catch-all. |
 | Timeout (Seconds)     | ✔️       | Adjust the maximum time (in seconds) the node should wait for a response from the API. Default is typically sufficient for most workflows. When a request exceeds this timeout, the API will return unknown / greylisted.                                                                  |
 
 #### 📊 Understanding the Response
@@ -291,7 +291,7 @@ the node's settings:
 | Item Input: Email(s)       |          | The email address(es) you want to validate. This can be a field, object or array from your input items, optionally combined to create a single batch request.                                                                                                                              |
 | Item Input: IP Address(es) | ✔️       | Pair an email address with an IP address (IPv4) to gain location metadata (Country, City, Zip) and check if the IP is associated with known proxy/VPN usage.                                                                                                                               |
 | Include Activity Data      | ✔️       | Provides metadata about the user's recent engagement, such as the last time they opened, clicked, or forwarded an email (e.g., within 30, 90, or 180 days).                                                                                                                                |
-| Verify+                    | ✔️       | Read before enabling: [Verify+](https://www.zerobounce.net/docs/email-list-validation/verify-plus#Verify_Plus). Significantly reduces "Catch-all" results. It uses proprietary technology to provide a definitive valid or invalid status for many domains that normally return catch-all. |
+| Verify+                    | ✔️       | Read before enabling: [Verify+](https://www.zerobounce.net/docs/products/verify-plus). Significantly reduces "Catch-all" results. It uses proprietary technology to provide a definitive valid or invalid status for many domains that normally return catch-all. |
 | Timeout (Seconds)          | ✔️       | Adjust the maximum time (3 - 60 seconds) the node should wait for a response from the API. Default is typically sufficient for most workflows. When a request exceeds this timeout, the API will return unknown / greylisted.                                                              |
 
 #### 📊 Understanding the Response

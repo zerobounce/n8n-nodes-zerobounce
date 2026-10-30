@@ -6,12 +6,12 @@
 	"resources": {
 		"credentialDocumentation": [
 			{
-				"url": "https://www.zerobounce.net/docs/api-dashboard/#API_keys_management"
+				"url": "https://www.zerobounce.net/docs/api-dashboard/keys-management"
 			}
 		],
 		"primaryDocumentation": [
 			{
-				"url": "https://www.zerobounce.net/docs/api-dashboard"
+				"url": "https://www.zerobounce.net/docs"
 			}
 		]
 	}
