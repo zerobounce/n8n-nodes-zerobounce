@@ -1,7 +1,7 @@
 import { IDataObject, IExecuteFunctions, INodeExecutionData, NodeOperationError } from 'n8n-workflow';
 import { IErrorResponse, IOperationHandler, isErrorResponse } from '../utils/handler.utils';
 import { BaseUrl, Endpoint, Operations } from '../enums';
-import { IRequestParams, zbGetRequest } from '../utils/request.utils';
+import { IRequestParams, zbPostFormRequest } from '../utils/request.utils';
 import { Email } from '../fields/email.field';
 import { ApiEndpoint } from '../fields/api-endpoint.field';
 
@@ -20,7 +20,7 @@ async function getActivityData(context: IExecuteFunctions, itemIndex: number) {
 
 	const request: IGetActivityDataRequest = { email: email };
 
-	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.ActivityData, request);
+	const fullResponse = await zbPostFormRequest(context, baseUrl, Endpoint.ActivityData, request);
 	const response = fullResponse.body as IGetActivityDataResponse | IErrorResponse;
 
 	if (isErrorResponse(response)) {

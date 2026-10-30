@@ -23,15 +23,39 @@ export class ZeroBounceApi implements ICredentialType {
 		request: {
 			baseURL: BaseUrl.DEFAULT,
 			url: Endpoint.GetCredits,
-			method: 'GET',
+			method: 'POST',
 		},
+		rules: [
+			{
+				type: 'responseSuccessBody',
+				properties: {
+					key: 'Credits',
+					value: '-1',
+					message: 'Invalid API key',
+				},
+			},
+			{
+				type: 'responseSuccessBody',
+				properties: {
+					key: 'Credits',
+					value: -1,
+					message: 'Invalid API key',
+				},
+			},
+		],
 	};
 
 	authenticate: IAuthenticate = async (
 		credentials: ICredentialDataDecryptedObject,
 		requestOptions: IHttpRequestOptions,
 	) => {
-		const apiKey = credentials.apiKey as string;
+		const apiKey =
+			typeof credentials.apiKey === 'string' ? credentials.apiKey.trim() : credentials.apiKey;
+
+		if (typeof apiKey !== 'string' || apiKey.length !== 32) {
+			throw new Error('Invalid API key: API key must be 32 characters long');
+		}
+
 		const method = requestOptions.method?.toUpperCase() ?? 'GET';
 
 		if (method === 'GET') {
@@ -45,15 +69,22 @@ export class ZeroBounceApi implements ICredentialType {
 		} else if (requestOptions.body instanceof FormData || requestOptions.body instanceof URLSearchParams) {
 			// POST Form → add to form data
 			requestOptions.body.set('api_key', apiKey);
-		} else {
-			// POST (or any non-GET) → add to body
-			const body = (requestOptions.body ?? {}) as Record<string, unknown>;
+		} else if (
+			requestOptions.body &&
+			typeof requestOptions.body === 'object' &&
+			Object.keys(requestOptions.body).length > 0
+		) {
+			// POST JSON (e.g. /validatebatch) → add to body
+			const body = requestOptions.body as Record<string, unknown>;
 
 			requestOptions.body = {
 				...body,
 				api_key: apiKey,
 			};
 			requestOptions.json = true;
+		} else {
+			// POST without body (e.g. credential test /getcredits) → send as URL-encoded form
+			requestOptions.body = new URLSearchParams({ api_key: apiKey });
 		}
 
 		requestOptions.headers = {

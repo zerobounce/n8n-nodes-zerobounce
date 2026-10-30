@@ -4,7 +4,7 @@ import { BaseUrl, Endpoint, Mode } from '../enums';
 import { FindBy, FindByType } from '../fields/email-finder.field';
 import { Domain } from '../fields/domain.field';
 import { CompanyName } from '../fields/company-name.field';
-import { IRequestParams, zbGetRequest } from './request.utils';
+import { IRequestParams, zbPostFormRequest } from './request.utils';
 import { IErrorResponse, isBlank } from './handler.utils';
 import { FirstName } from '../fields/first-name.field';
 import { MiddleName } from '../fields/middle-name.field';
@@ -113,7 +113,7 @@ export async function find(context: IExecuteFunctions, itemIndex: number, mode: 
 		};
 	}
 
-	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.GuessFormat, request);
+	const fullResponse = await zbPostFormRequest(context, baseUrl, Endpoint.GuessFormat, request);
 	const response = fullResponse.body as IFindResponse | IDomainSearchResponse | IErrorResponse;
 
 	if (isUnsuccessfulResponse(response)) {

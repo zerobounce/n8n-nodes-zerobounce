@@ -120,6 +120,29 @@ export async function zbGetFileRequest(
 	return await zbRequest(context, requestOptions);
 }
 
+export function toUrlSearchParams(params?: IRequestParams): URLSearchParams {
+	const searchParams = new URLSearchParams();
+
+	if (params) {
+		for (const [key, value] of Object.entries(params)) {
+			if (value === undefined || value === null) continue;
+			searchParams.append(key, String(value));
+		}
+	}
+
+	return searchParams;
+}
+
+export async function zbPostFormRequest(
+	context: IExecuteFunctions,
+	baseUrl: BaseUrl,
+	endpoint: Endpoint | BulkEndpoint,
+	formParams?: IRequestParams,
+	headers?: IDataObject,
+): Promise<IN8nHttpFullResponse> {
+	return await zbPostRequest(context, baseUrl, endpoint, toUrlSearchParams(formParams), headers);
+}
+
 export async function zbPostRequest(
 	context: IExecuteFunctions,
 	baseUrl: BaseUrl,
@@ -133,7 +156,7 @@ export async function zbPostRequest(
 		url: endpoint,
 		json: true,
 		returnFullResponse: true,
-		body: body,
+		body: body ?? new URLSearchParams(),
 		headers: headers,
 	};
 

@@ -1,4 +1,4 @@
-import { IRequestParams, zbGetRequest, zbPostRequest } from '../utils/request.utils';
+import { IRequestParams, zbPostFormRequest, zbPostRequest } from '../utils/request.utils';
 import {
 	getDateParameter,
 	IAltErrorResponse,
@@ -84,7 +84,7 @@ async function getCredits(context: IExecuteFunctions, itemIndex: number): Promis
 	const options = context.getNodeParameter(AddOptions.name, itemIndex, {}) as { creditsRequired?: number };
 	const creditsRequired = options.creditsRequired;
 
-	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.GetCredits);
+	const fullResponse = await zbPostFormRequest(context, baseUrl, Endpoint.GetCredits);
 	const response = fullResponse.body as IGetCreditsResponse | IErrorResponse;
 
 	if (isErrorResponse(response)) {
@@ -135,7 +135,7 @@ async function getApiUsage(context: IExecuteFunctions, itemIndex: number): Promi
 		end_date: getDateParameter(context, itemIndex, EndDate),
 	} as IGetApiUsageRequest;
 
-	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.GetApiUsage, request);
+	const fullResponse = await zbPostFormRequest(context, baseUrl, Endpoint.GetApiUsage, request);
 	const response = fullResponse.body as IGetApiUsageResponse | IErrorResponse;
 
 	if (isErrorResponse(response)) {
@@ -153,7 +153,7 @@ async function getApiUsage(context: IExecuteFunctions, itemIndex: number): Promi
 async function listFilters(context: IExecuteFunctions, itemIndex: number): Promise<INodeExecutionData[]> {
 	const baseUrl = context.getNodeParameter(ApiEndpoint.name, itemIndex) as BaseUrl;
 
-	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.FiltersList);
+	const fullResponse = await zbPostFormRequest(context, baseUrl, Endpoint.FiltersList);
 	const response = fullResponse.body as IListFiltersResponse[] | IAltErrorResponse;
 
 	if (isAltErrorResponse(response)) {

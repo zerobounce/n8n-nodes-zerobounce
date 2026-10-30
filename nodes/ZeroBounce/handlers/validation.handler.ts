@@ -8,7 +8,7 @@ import {
 	isErrorResponse,
 	uniqueValue,
 } from '../utils/handler.utils';
-import { IRequestBody, IRequestParams, zbGetRequest, zbPostRequest } from '../utils/request.utils';
+import { IRequestBody, IRequestParams, zbPostFormRequest, zbPostRequest } from '../utils/request.utils';
 import { BaseUrl, BulkEndpoint, Endpoint, Mode, Operations } from '../enums';
 import { Email } from '../fields/email.field';
 import { deleteFile, fileStatus, getFile, sendFile } from '../utils/bulk.utils';
@@ -124,7 +124,7 @@ async function validate(context: IExecuteFunctions, itemIndex: number): Promise<
 		verify_plus: options.verifyPlus,
 	};
 
-	const fullResponse = await zbGetRequest(context, baseUrl, Endpoint.Validate, request);
+	const fullResponse = await zbPostFormRequest(context, baseUrl, Endpoint.Validate, request);
 	const response = fullResponse.body as IValidateResult | IErrorResponse;
 
 	if (isErrorResponse(response)) {
