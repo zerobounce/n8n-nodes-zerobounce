@@ -1,5 +1,5 @@
 {
-	"node": "n8n-nodes-zerobounce",
+	"node": "@zerobounce/n8n-nodes-zerobounce.zeroBounce",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Communication", "Utility"],
